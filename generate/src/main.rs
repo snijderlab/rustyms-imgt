@@ -47,20 +47,23 @@ fn main() {
     for (species, germlines) in found_germlines {
         writeln!(
             output,
-            "/// Germlines for {} {}
+            "/// ## {} / {}
             ///
 /// | Kind | V | J | C |
 /// |------|---|---|---|
-/// |Heavy|{}|{}|{}|
-/// |Light|{}|{}|-|
+/// |IGHV{}
+/// |IGKV{}
+/// |IGLV{}
+/// |IGIV{}
+/// 
+/// _Number of genes / number of alleles_
 /// ",
             species.scientific_name(),
             species.common_name(),
-            germlines.heavy_variable.len(),
-            germlines.heavy_joining.len(),
-            germlines.heavy_constant.len(),
-            germlines.light_variable.len(),
-            germlines.light_joining.len()
+            germlines.h.doc_row(),
+            germlines.k.doc_row(),
+            germlines.l.doc_row(),
+            germlines.i.doc_row(),
         )
         .unwrap();
         found_species.push(species);
@@ -75,17 +78,36 @@ fn main() {
     )
     .unwrap();
 
-    // writeln!(output, "static GERMLINE_DATA: HashMap<Species, OnceLock<Germlines>> = HashMap::new([").unwrap();
-
-    for (index, species) in found_species.iter().enumerate() {
-        writeln!(output, "Species::{} => Some(LOCK{index}.get_or_init(|| {{bincode::deserialize(include_bytes!(\"{species}.bin\")).unwrap()}})),", species.ident()).unwrap();
+    for species in &found_species {
+        writeln!(output, "Species::{0} => Some(lock_{0}()),", species.ident()).unwrap();
     }
     writeln!(output, "_=>None}}}}").unwrap();
+    writeln!(
+        output,
+        "pub fn all_germlines() -> impl std::iter::Iterator<Item = &'static Germlines> {{"
+    )
+    .unwrap();
+    let mut first = true;
+    for species in &found_species {
+        if first {
+            first = false;
+            writeln!(output, "std::iter::once(lock_{}())", species.ident()).unwrap();
+        } else {
+            writeln!(
+                output,
+                ".chain(std::iter::once(lock_{}()))",
+                species.ident()
+            )
+            .unwrap();
+        }
+    }
+    writeln!(output, "}}").unwrap();
 
-    for (index, _) in found_species.iter().enumerate() {
+    for species in &found_species {
         writeln!(
             output,
-            "static LOCK{index}: OnceLock<Germlines> = OnceLock::new();"
+            "static LOCK_{0}: OnceLock<Germlines> = OnceLock::new();\nfn lock_{0}()->&'static Germlines{{LOCK_{0}.get_or_init(|| {{bincode::deserialize(include_bytes!(\"{species}.bin\")).unwrap()}})}}",
+            species.ident(),
         )
         .unwrap();
     }

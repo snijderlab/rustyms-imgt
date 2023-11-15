@@ -5,37 +5,53 @@ use std::{fmt::Display, str::FromStr};
 
 use super::species::Species;
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct Germlines {
-    pub species: Species,
-    pub heavy_variable: Vec<Germline>,
-    pub heavy_joining: Vec<Germline>,
-    pub heavy_constant: Vec<Germline>,
-    pub light_variable: Vec<Germline>,
-    pub light_joining: Vec<Germline>,
+    species: Species,
+    pub(crate) h: Chain,
+    pub(crate) k: Chain,
+    pub(crate) l: Chain,
+    pub(crate) i: Chain,
 }
 
 impl Germlines {
-    pub fn new(species: Species) -> Self {
+    pub fn species(&self) -> Species {
+        self.species
+    }
+
+    pub(crate) fn new(species: Species) -> Self {
         Self {
             species,
-            heavy_variable: Vec::new(),
-            heavy_joining: Vec::new(),
-            heavy_constant: Vec::new(),
-            light_variable: Vec::new(),
-            light_joining: Vec::new(),
+            h: Chain::default(),
+            k: Chain::default(),
+            l: Chain::default(),
+            i: Chain::default(),
         }
     }
 
-    pub fn insert(&mut self, germline: Germline) {
-        let name = &germline.name;
-        let db = match (name.kind, &name.segment) {
-            (Kind::Heavy, Segment::V) => &mut self.heavy_variable,
-            (Kind::Heavy, Segment::J) => &mut self.heavy_joining,
-            (Kind::Heavy, Segment::C(_)) => &mut self.heavy_constant,
-            (Kind::LightKappa | Kind::LightLambda, Segment::V) => &mut self.light_variable,
-            (Kind::LightKappa | Kind::LightLambda, Segment::J) => &mut self.light_joining,
-            _ => panic!("Unknown combination of kind + segment"),
+    pub(crate) fn insert(&mut self, germline: Germline) {
+        match &germline.name.kind {
+            Kind::Heavy => self.h.insert(germline),
+            Kind::LightKappa => self.k.insert(germline),
+            Kind::LightLambda => self.l.insert(germline),
+            Kind::I => self.i.insert(germline),
+        };
+    }
+}
+
+#[derive(Serialize, Deserialize, Default, Debug)]
+pub(crate) struct Chain {
+    pub variable: Vec<Germline>,
+    pub joining: Vec<Germline>,
+    pub constant: Vec<Germline>,
+}
+
+impl Chain {
+    pub(crate) fn insert(&mut self, germline: Germline) {
+        let db = match &germline.name.segment {
+            Segment::V => &mut self.variable,
+            Segment::J => &mut self.joining,
+            Segment::C(_) => &mut self.constant,
         };
 
         match db.binary_search_by_key(&germline.name, |g| g.name.clone()) {
@@ -43,22 +59,34 @@ impl Germlines {
             Err(index) => db.insert(index, germline),
         }
     }
+
+    pub(crate) fn doc_row(&self) -> String {
+        format!(
+            "|{}/{}|{}/{}|{}/{}|",
+            self.variable.len(),
+            self.variable.iter().map(|g| g.alleles.len()).sum::<usize>(),
+            self.joining.len(),
+            self.joining.iter().map(|g| g.alleles.len()).sum::<usize>(),
+            self.constant.len(),
+            self.constant.iter().map(|g| g.alleles.len()).sum::<usize>(),
+        )
+    }
 }
 
-#[derive(Serialize, Deserialize)]
-pub struct Germline {
+#[derive(Serialize, Deserialize, Debug)]
+pub(crate) struct Germline {
     pub name: Gene,
-    pub alleles: Vec<(usize, Allele)>,
+    pub alleles: Vec<(usize, AnnotatedSequence)>,
 }
 
-#[derive(Serialize, Deserialize)]
-pub struct Allele {
+#[derive(Serialize, Deserialize, Debug)]
+pub struct AnnotatedSequence {
     pub sequence: Vec<AminoAcid>,
     pub regions: Vec<(Region, usize)>,
     pub conserved: Vec<(Annotation, usize)>,
 }
 
-#[derive(Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord, Clone)]
+#[derive(Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord, Clone, Debug)]
 pub struct Gene {
     pub kind: Kind,
     pub segment: Segment,
@@ -192,11 +220,26 @@ impl Gene {
     }
 }
 
-#[derive(Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
+#[derive(Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Hash, Debug)]
 pub enum Kind {
-    Heavy,
+    Heavy = 0,
     LightKappa,
     LightLambda,
+    /// Fish I kind
+    I,
+}
+
+impl TryFrom<usize> for Kind {
+    type Error = ();
+    fn try_from(i: usize) -> Result<Self, Self::Error> {
+        match i {
+            0 => Ok(Self::Heavy),
+            1 => Ok(Self::LightKappa),
+            2 => Ok(Self::LightLambda),
+            3 => Ok(Self::I),
+            _ => Err(()),
+        }
+    }
 }
 
 impl FromStr for Kind {
@@ -206,6 +249,7 @@ impl FromStr for Kind {
             "K" => Ok(Self::LightKappa),
             "L" => Ok(Self::LightLambda),
             "H" => Ok(Self::Heavy),
+            "I" => Ok(Self::I),
             _ => Err(()),
         }
     }
@@ -220,20 +264,20 @@ impl Display for Kind {
                 Self::Heavy => "H",
                 Self::LightKappa => "K",
                 Self::LightLambda => "L",
+                Self::I => "I",
             }
         )
     }
 }
 
-#[derive(Debug, PartialEq, Eq, Serialize, Deserialize, PartialOrd, Ord, Clone)]
+#[derive(Debug, PartialEq, Eq, Serialize, Deserialize, PartialOrd, Ord, Clone, Hash, Copy)]
 pub enum Segment {
     V,
-    D,
     J,
     C(Option<Constant>),
 }
 
-#[derive(Debug, PartialEq, Eq, Serialize, Deserialize, PartialOrd, Ord, Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, Serialize, Deserialize, PartialOrd, Ord, Clone, Copy, Hash)]
 pub enum Constant {
     A,
     D,
@@ -247,7 +291,6 @@ impl FromStr for Segment {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "V" => Ok(Self::V),
-            //"D" => Ok(Self::D),
             "J" => Ok(Self::J),
             "C" => Ok(Self::C(None)),
             "A" => Ok(Self::C(Some(Constant::A))),
@@ -267,7 +310,6 @@ impl Display for Segment {
             "{}",
             match self {
                 Self::V => "V",
-                Self::D => "D",
                 Self::J => "J",
                 Self::C(None) => "C",
                 Self::C(Some(Constant::A)) => "A",
@@ -329,7 +371,7 @@ impl Display for Region {
     }
 }
 
-#[derive(Clone, Copy, Serialize, Deserialize)]
+#[derive(Clone, Copy, Serialize, Deserialize, Debug)]
 pub enum Annotation {
     Cysteine1,
     Cysteine2,
