@@ -1,4 +1,5 @@
-use std::{sync::OnceLock, collections::HashMap};
+#![allow(non_snake_case,non_upper_case_globals)]
+use std::sync::OnceLock;
 use crate::shared::{Germlines, Species};
 /// Get the germlines for any of the available species. See the tables below for which species have which data available.
 ///
@@ -340,6 +341,7 @@ Species::SalmoSalar => Some(lock_SalmoSalar()),
 Species::SusScrofa => Some(lock_SusScrofa()),
 Species::VicugnaPacos => Some(lock_VicugnaPacos()),
 _=>None}}
+/// Get all germlines in one iterator, see [`germlines()`] for more information about the available germlines
 pub fn all_germlines() -> impl std::iter::Iterator<Item = &'static Germlines> {
 std::iter::once(lock_BosTaurus())
 .chain(std::iter::once(lock_CamelusDromedarius()))

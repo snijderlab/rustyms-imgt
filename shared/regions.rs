@@ -5,6 +5,7 @@ use std::{fmt::Display, str::FromStr};
 
 use super::species::Species;
 
+/// A selection of germlines from a single species. Use the [`Self::get`] method to retrieve the sequences you are interested in.
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Germlines {
     species: Species,
@@ -15,6 +16,7 @@ pub struct Germlines {
 }
 
 impl Germlines {
+    /// Get the species for which this are the germlines
     pub fn species(&self) -> Species {
         self.species
     }
@@ -80,12 +82,13 @@ pub(crate) struct Germline {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct AnnotatedSequence {
-    pub sequence: Vec<AminoAcid>,
+pub(crate) struct AnnotatedSequence {
+    pub sequence: LinearPeptide,
     pub regions: Vec<(Region, usize)>,
     pub conserved: Vec<(Annotation, usize)>,
 }
 
+/// A germline gene name, broken up in its constituent parts.
 #[derive(Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord, Clone, Debug)]
 pub struct Gene {
     pub kind: Kind,
@@ -134,7 +137,7 @@ impl Display for Gene {
 }
 
 impl Gene {
-    pub fn from_str(s: &str) -> Result<(Self, usize), String> {
+    pub fn from_imgt_name(s: &str) -> Result<(Self, usize), String> {
         fn parse_name(s: &str) -> (Option<(usize, String)>, &str) {
             let num = s
                 .chars()
@@ -220,6 +223,7 @@ impl Gene {
     }
 }
 
+/// Any kind of germline
 #[derive(Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Hash, Debug)]
 pub enum Kind {
     Heavy = 0,
@@ -270,13 +274,18 @@ impl Display for Kind {
     }
 }
 
+/// Any segment in a germline, eg variable, joining
 #[derive(Debug, PartialEq, Eq, Serialize, Deserialize, PartialOrd, Ord, Clone, Hash, Copy)]
 pub enum Segment {
+    /// Variable
     V,
+    /// Joining
     J,
+    /// Constant, potentially with the type of constant given as well
     C(Option<Constant>),
 }
 
+/// Any type of constant segment
 #[derive(Debug, PartialEq, Eq, Serialize, Deserialize, PartialOrd, Ord, Clone, Copy, Hash)]
 pub enum Constant {
     A,
@@ -294,7 +303,7 @@ impl FromStr for Segment {
             "J" => Ok(Self::J),
             "C" => Ok(Self::C(None)),
             "A" => Ok(Self::C(Some(Constant::A))),
-            "D" => Ok(Self::C(Some(Constant::D))), // TODO: How is this used??
+            "D" => Ok(Self::C(Some(Constant::D))),
             "E" => Ok(Self::C(Some(Constant::E))),
             "G" => Ok(Self::C(Some(Constant::G))),
             "M" => Ok(Self::C(Some(Constant::M))),
@@ -322,6 +331,7 @@ impl Display for Segment {
     }
 }
 
+/// Any region in a germline, eg FR1, CDR1
 #[derive(Debug, Serialize, Deserialize, Copy, Clone)]
 pub enum Region {
     CDR1,
@@ -371,6 +381,7 @@ impl Display for Region {
     }
 }
 
+/// Any annotation in a germline, eg conserved residues
 #[derive(Clone, Copy, Serialize, Deserialize, Debug)]
 pub enum Annotation {
     Cysteine1,

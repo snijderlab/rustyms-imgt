@@ -1,31 +1,87 @@
 use std::collections::HashSet;
 
+use rustyms::LinearPeptide;
+
 pub use crate::shared::*;
 
+/// The selection rules for iterating over all alleles in a selection of germlines.
 pub struct Selection {
-    pub kind: Option<HashSet<Kind>>,
-    pub segment: Option<HashSet<Segment>>,
+    /// The kind of alleles you want, None allows all, otherwise only the kinds specified will be returned
+    pub kinds: Option<HashSet<Kind>>,
+    /// The kind of segments you want, None allows all, otherwise only the segments specified will be returned
+    pub segments: Option<HashSet<Segment>>,
+    /// The way of handling alleles you want
     pub allele: AlleleSelection,
 }
 
+impl Selection {
+    /// Builder pattern method to add a kind selection
+    pub fn kind(self, kinds: impl Into<HashSet<Kind>>) -> Self {
+        Self {
+            kinds: Some(kinds.into()),
+            ..self
+        }
+    }
+    /// Builder pattern method to add a segment selection
+    pub fn segment(self, segments: impl Into<HashSet<Segment>>) -> Self {
+        Self {
+            segments: Some(segments.into()),
+            ..self
+        }
+    }
+    /// Builder pattern method to add an allele selection
+    pub fn allele(self, allele: AlleleSelection) -> Self {
+        Self { allele, ..self }
+    }
+}
+
+impl Default for Selection {
+    /// Get a default selection, which gives all kinds and segments but only returns the first allele
+    fn default() -> Self {
+        Self {
+            kinds: None,
+            segments: None,
+            allele: AlleleSelection::First,
+        }
+    }
+}
+
+/// The way of handling alleles you want
 pub enum AlleleSelection {
+    /// Return all alleles
     All,
+    /// Only return the first allele. It can have a number higher than 1 if the previous alleles are not functional.
     First,
 }
 
+/// A returned allele
 #[non_exhaustive]
 #[derive(Debug)]
-pub struct FoundAllele<'a> {
+pub struct Allele<'a> {
+    /// The gene where this is the sequence for, eg `IGHV3-23`
     pub gene: &'a Gene,
+    /// The allele number, in IMGT this follows the name, eg `*01` is the allele in `IGHV3-23*01`
     pub allele: usize,
-    pub sequence: &'a AnnotatedSequence,
+    /// The actual sequence, the sequences are flat amino acids, no modification of any way shape or form
+    pub sequence: &'a LinearPeptide,
+    /// The regions in the sequence, every region has an annotation and a length, all lengths together are the same length as the full sequence
+    pub regions: &'a [(Region, usize)],
+    /// Any additional annotations, every annotation has beside the kind it is also it location, as index in the sequence
+    pub annotations: &'a [(Annotation, usize)],
+}
+
+impl<'a> Allele<'a> {
+    pub fn name(&self) -> String {
+        format!("{}*{:02}", self.gene, self.allele)
+    }
 }
 
 impl Germlines {
+    /// Retrieve the actual sequences fitting to the given selection rules.
     pub fn get<'a>(
         &'static self,
         selection: &'a Selection,
-    ) -> Option<impl Iterator<Item = FoundAllele<'a>> + 'a> {
+    ) -> Option<impl Iterator<Item = Allele<'a>> + 'a> {
         GermlinesIterator::new(selection, self)
     }
 
@@ -77,7 +133,7 @@ impl<'a> GermlinesIterator<'a> {
     fn new(selection: &'a Selection, germlines: &'static Germlines) -> Option<Self> {
         let mut index = Kind::Heavy;
         let (iter, index) = (|| {
-            if let Some(kinds) = &selection.kind {
+            if let Some(kinds) = &selection.kinds {
                 if kinds.contains(&index) {
                     return Some((
                         ChainsIterator::new(selection, germlines.index(index))?,
@@ -111,14 +167,14 @@ impl<'a> GermlinesIterator<'a> {
 }
 
 impl<'a> Iterator for GermlinesIterator<'a> {
-    type Item = FoundAllele<'a>;
+    type Item = Allele<'a>;
     fn next(&mut self) -> Option<Self::Item> {
         let mut next = self.iter.next();
         while next.is_none() {
-            if self.selection.kind.is_none() {
+            if self.selection.kinds.is_none() {
                 self.iter = ChainsIterator::new(self.selection, self.germlines.index(self.index))?;
                 self.index = Kind::try_from(self.index as usize + 1).ok()?;
-            } else if let Some(kinds) = &self.selection.kind {
+            } else if let Some(kinds) = &self.selection.kinds {
                 for index in self.index as usize..=Kind::I as usize {
                     let index = Kind::try_from(index).ok()?;
                     if kinds.contains(&index) {
@@ -158,7 +214,7 @@ impl<'a> ChainsIterator<'a> {
     fn new(selection: &'a Selection, chain: &'static Chain) -> Option<Self> {
         let mut index = Segment::V;
         let (iter, index) = (|| {
-            if let Some(segments) = &selection.segment {
+            if let Some(segments) = &selection.segments {
                 if segments.contains(&index) {
                     return Some((chain.index(selection, index), index));
                 }
@@ -186,17 +242,18 @@ impl<'a> ChainsIterator<'a> {
 }
 
 impl<'a> Iterator for ChainsIterator<'a> {
-    type Item = FoundAllele<'a>;
+    type Item = Allele<'a>;
     fn next(&mut self) -> Option<Self::Item> {
         let mut next = self.iter.next();
         while next.is_none() {
-            if self.selection.segment.is_none() {
+            if self.selection.segments.is_none() {
                 self.iter = self.chain.index(self.selection, self.index);
                 self.index = self.index.next()?;
-            } else if let Some(segments) = &self.selection.segment {
+            } else if let Some(segments) = &self.selection.segments {
                 while let Some(index) = self.index.next() {
                     self.index = index;
                     if segments.contains(&index) {
+                        // TODO: Allow Constant(None) to select all constant chains
                         self.iter = self.chain.index(self.selection, self.index);
                         break;
                     }
@@ -218,7 +275,7 @@ struct AllelesIterator<'a> {
 }
 
 impl<'a> Iterator for AllelesIterator<'a> {
-    type Item = FoundAllele<'a>;
+    type Item = Allele<'a>;
     fn next(&mut self) -> Option<Self::Item> {
         if self.index >= self.elements.len() {
             return None;
@@ -241,10 +298,12 @@ impl<'a> Iterator for AllelesIterator<'a> {
         if let Some((germline, sub)) = self.sub_elements {
             let res = &sub[self.sub_index];
             self.sub_index += 1;
-            Some(FoundAllele {
+            Some(Allele {
                 gene: &germline.name,
                 allele: res.0,
-                sequence: &res.1,
+                sequence: &res.1.sequence,
+                regions: &res.1.regions,
+                annotations: &res.1.conserved,
             })
         } else {
             None
@@ -254,8 +313,6 @@ impl<'a> Iterator for AllelesIterator<'a> {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashSet;
-
     use crate::germlines;
     use crate::Selection;
     use crate::{Kind, Segment, Species};
@@ -263,13 +320,10 @@ mod tests {
     #[test]
     fn try_first_human() {
         let germlines = germlines(Species::HomoSapiens).unwrap();
-        let selection = Selection {
-            kind: Some(HashSet::from([Kind::Heavy])),
-            segment: Some(HashSet::from([Segment::V])),
-            allele: crate::AlleleSelection::First,
-        };
+        let selection = Selection::default()
+            .kind([Kind::Heavy])
+            .segment([Segment::V]);
         let first = germlines.get(&selection).unwrap().next().unwrap();
-        assert_eq!(first.gene.to_string(), "IGHV1-2");
-        assert_eq!(first.allele, 2);
+        assert_eq!(first.name(), "IGHV1-2*02");
     }
 }

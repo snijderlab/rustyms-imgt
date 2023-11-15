@@ -38,7 +38,11 @@ fn main() {
         //writeln!(output, "{}", element.unwrap()).unwrap();
     }
 
-    writeln!(output, "use std::{{sync::OnceLock, collections::HashMap}};\nuse crate::shared::{{Germlines, Species}};").unwrap();
+    writeln!(
+        output,
+        "#![allow(non_snake_case,non_upper_case_globals)]\nuse std::sync::OnceLock;\nuse crate::shared::{{Germlines, Species}};"
+    )
+    .unwrap();
     writeln!(output, "/// Get the germlines for any of the available species. See the tables below for which species have which data available.").unwrap();
     writeln!(output, "///").unwrap();
     let mut found_species = Vec::new();
@@ -84,7 +88,7 @@ fn main() {
     writeln!(output, "_=>None}}}}").unwrap();
     writeln!(
         output,
-        "pub fn all_germlines() -> impl std::iter::Iterator<Item = &'static Germlines> {{"
+        "/// Get all germlines in one iterator, see [`germlines()`] for more information about the available germlines\npub fn all_germlines() -> impl std::iter::Iterator<Item = &'static Germlines> {{"
     )
     .unwrap();
     let mut first = true;
@@ -137,7 +141,7 @@ fn parse_dat<T: std::io::Read>(
                     } else if line.starts_with("FT") {
                         data.ft.push(line);
                     } else if line.starts_with("OS") && data.os.is_none() {
-                        data.os = Species::from_str(line[5..].trim()).unwrap_or_else(|()| {
+                        data.os = Species::from_imgt(line[5..].trim()).unwrap_or_else(|()| {
                             println!("Not a species name: `{line}`");
                             None
                         });
@@ -550,12 +554,12 @@ impl IMGTGene {
             })
             .map(|(key, _)| (conserved_map[key.as_str()], 0))
             .collect();
-        let (name, allele) = Gene::from_str(self.allele.as_str())?;
+        let (name, allele) = Gene::from_imgt_name(self.allele.as_str())?;
         Ok(Germline {
             name,
             alleles: vec![(
                 allele,
-                Allele {
+                AnnotatedSequence {
                     sequence,
                     regions,
                     conserved,
