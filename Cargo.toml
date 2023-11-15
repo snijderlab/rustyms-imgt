@@ -1,0 +1,4 @@
+[workspace]
+
+members = ["generate", "library"]
+resolver = "2"
