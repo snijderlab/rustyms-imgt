@@ -340,7 +340,7 @@ impl Display for Segment {
 }
 
 /// Any region in a germline, eg FR1, CDR1
-#[derive(Debug, Serialize, Deserialize, Copy, Clone)]
+#[derive(Debug, Serialize, Deserialize, Copy, Clone, PartialEq, Eq, Hash)]
 pub enum Region {
     CDR1,
     CDR2,
