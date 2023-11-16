@@ -49,7 +49,7 @@ pub(crate) struct Chain {
 }
 
 impl Chain {
-    pub(crate) fn insert(&mut self, germline: Germline) {
+    pub(crate) fn insert(&mut self, mut germline: Germline) {
         let db = match &germline.name.segment {
             Segment::V => &mut self.variable,
             Segment::J => &mut self.joining,
@@ -57,7 +57,15 @@ impl Chain {
         };
 
         match db.binary_search_by_key(&germline.name, |g| g.name.clone()) {
-            Ok(index) => db[index].alleles.extend(germline.alleles),
+            Ok(index) => {
+                let allele_index = db[index]
+                    .alleles
+                    .binary_search_by_key(&germline.alleles[0].0, |a| a.0)
+                    .unwrap_or_else(|e| e);
+                db[index]
+                    .alleles
+                    .insert(allele_index, germline.alleles.pop().unwrap())
+            } // TODO: figure out why multiple copies can have the same allele number
             Err(index) => db.insert(index, germline),
         }
     }

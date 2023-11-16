@@ -85,6 +85,8 @@ impl Germlines {
         GermlinesIterator::new(selection, self)
     }
 
+    // TODO: Make a find method which finds a specific germline (does binary search on the name and then either gives the first allele or a specific one)
+
     fn index(&self, index: Kind) -> &Chain {
         match index {
             Kind::Heavy => &self.h,
@@ -324,6 +326,6 @@ mod tests {
             .kind([Kind::Heavy])
             .segment([Segment::V]);
         let first = germlines.get(&selection).unwrap().next().unwrap();
-        assert_eq!(first.name(), "IGHV1-2*02");
+        assert_eq!(first.name(), "IGHV1-2*01");
     }
 }
