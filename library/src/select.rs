@@ -90,7 +90,7 @@ impl<'a> Allele<'a> {
             }
             next = self.regions[regions_index];
         }
-        Some((next.0, left == 0))
+        Some((next.0, left == 1))
     }
 
     /// Get all annotations for this position
