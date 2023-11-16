@@ -71,8 +71,34 @@ pub struct Allele<'a> {
 }
 
 impl<'a> Allele<'a> {
+    /// Get the IMGT name for this allele
     pub fn name(&self) -> String {
         format!("{}*{:02}", self.gene, self.allele)
+    }
+
+    /// Get the region for a specific index into the sequence, None if outside range,
+    /// the additional bool indicates if this is the starting position for the region
+    pub fn region(&self, index: usize) -> Option<(Region, bool)> {
+        let mut left = index;
+        let mut regions_index = 0;
+        let mut next = self.regions[regions_index];
+        while left > next.1 {
+            left -= next.1;
+            regions_index += 1;
+            if regions_index == self.regions.len() {
+                return None;
+            }
+            next = self.regions[regions_index];
+        }
+        Some((next.0, left == next.1))
+    }
+
+    /// Get all annotations for this position
+    pub fn annotations(&self, index: usize) -> impl Iterator<Item = Annotation> + 'a {
+        self.annotations
+            .iter()
+            .filter(move |a| a.1 == index)
+            .map(|a| a.0)
     }
 }
 
