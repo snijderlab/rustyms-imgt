@@ -1,9 +1,10 @@
-use std::collections::HashSet;
+use std::{collections::HashSet, fmt::Display};
 
 use rustyms::LinearPeptide;
 
 pub use crate::shared::*;
 
+#[derive(Debug, Clone, PartialEq, Eq)]
 /// The selection rules for iterating over all alleles in a selection of germlines.
 pub struct Selection {
     /// The kind of alleles you want, None allows all, otherwise only the kinds specified will be returned
@@ -46,6 +47,7 @@ impl Default for Selection {
     }
 }
 
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
 /// The way of handling alleles you want
 pub enum AlleleSelection {
     /// Return all alleles
