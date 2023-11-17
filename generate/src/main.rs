@@ -555,7 +555,7 @@ impl IMGTGene {
             })
             .map(|(key, _)| (conserved_map[key.as_str()], 0))
             .collect();
-        let (name, allele) = Gene::from_imgt_name(self.allele.as_str())?;
+        let (name, allele) = Gene::from_imgt_name_with_allele(self.allele.as_str())?;
         Ok(Germline {
             name,
             alleles: vec![(

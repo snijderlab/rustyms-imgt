@@ -1,5 +1,4 @@
-use itertools::Itertools;
-use rustyms::{AminoAcid, LinearPeptide};
+use rustyms::LinearPeptide;
 use serde::{Deserialize, Serialize};
 use std::{fmt::Display, str::FromStr};
 
@@ -16,11 +15,6 @@ pub(crate) struct Germlines {
 }
 
 impl Germlines {
-    /// Get the species for which this are the germlines
-    pub fn species(&self) -> Species {
-        self.species
-    }
-
     pub(crate) fn new(species: Species) -> Self {
         Self {
             species,
@@ -145,7 +139,24 @@ impl Display for Gene {
 }
 
 impl Gene {
-    pub fn from_imgt_name(s: &str) -> Result<(Self, usize), String> {
+    /// Get an IMGT name with allele, eg IGHV3-23*03
+    pub fn from_imgt_name_with_allele(s: &str) -> Result<(Self, usize), String> {
+        let (gene, tail) = Self::from_imgt_name_internal(s)?;
+        let allele = if let Some(tail) = tail.strip_prefix('*') {
+            tail.parse()
+                .map_err(|_| format!("Invalid allele spec: `{}`", &tail))
+        } else {
+            Err(format!("Invalid allele spec: `{tail}`"))
+        }?;
+        Ok((gene, allele))
+    }
+
+    /// Get an IMGT name, eg IGHV3-23
+    pub fn from_imgt_name(s: &str) -> Result<Self, String> {
+        Self::from_imgt_name_internal(s).map(|(gene, _)| gene)
+    }
+
+    fn from_imgt_name_internal(s: &str) -> Result<(Self, &str), String> {
         fn parse_name(s: &str) -> (Option<(usize, String)>, &str) {
             let num = s
                 .chars()
@@ -209,13 +220,6 @@ impl Gene {
                 tail = t.trim_start_matches('-');
             }
 
-            let allele = if let Some(tail) = tail.strip_prefix('*') {
-                tail.parse()
-                    .map_err(|_| format!("Invalid allele spec: `{}`", &tail))
-            } else {
-                Err(format!("Invalid allele spec: `{tail}`"))
-            }?;
-
             Ok((
                 Self {
                     kind,
@@ -223,7 +227,7 @@ impl Gene {
                     number,
                     family,
                 },
-                allele,
+                tail,
             ))
         } else {
             Err("Gene name does not start with IG")?
