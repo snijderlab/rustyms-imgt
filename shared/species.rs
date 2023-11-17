@@ -4,7 +4,7 @@ use std::fmt::Display;
 
 macro_rules! species {
     ($($identifier:ident, $common:expr, $imgt:expr, $scientific:expr)*) => {
-        /// All species available in the IMGT dataset. Look at the [`crate::germlines()`] function to see which actually have data provided.
+        /// All species available in the IMGT dataset. Look at the main documentation to see which actually have data provided.
         #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, Ord, PartialOrd)]
         #[non_exhaustive]
         pub enum Species {

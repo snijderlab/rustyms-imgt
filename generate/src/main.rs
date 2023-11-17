@@ -19,6 +19,7 @@ use rustyms::AminoAcid;
 fn main() {
     let file = File::open("../data/imgt.dat.Z").unwrap();
     let mut output = BufWriter::new(File::create("../germlines/germlines.rs").unwrap());
+    let mut docs = BufWriter::new(File::create("../germlines/germlines.md").unwrap());
     let mut error = BufWriter::new(File::create("errors.dat").unwrap());
     let data = parse_dat(BufReader::new(GzDecoder::new(file)));
     let mut grouped = HashMap::new();
@@ -50,18 +51,18 @@ fn main() {
     found_germlines.sort_unstable_by_key(|g| g.0);
     for (species, germlines) in found_germlines {
         writeln!(
-            output,
-            "/// ## {} / {}
-            ///
-/// | Kind | V | J | C |
-/// |------|---|---|---|
-/// |IGHV{}
-/// |IGKV{}
-/// |IGLV{}
-/// |IGIV{}
-/// 
-/// _Number of genes / number of alleles_
-/// ",
+            docs,
+            "## {} / {}
+
+| Kind | V | J | C |
+|------|---|---|---|
+|IGHV{}
+|IGKV{}
+|IGLV{}
+|IGIV{}
+
+_Number of genes / number of alleles_
+",
             species.scientific_name(),
             species.common_name(),
             germlines.h.doc_row(),

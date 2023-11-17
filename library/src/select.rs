@@ -1,12 +1,23 @@
-use std::{collections::HashSet, fmt::Display};
+use std::collections::HashSet;
 
 use rustyms::LinearPeptide;
 
 pub use crate::shared::*;
 
+/// Get a specific germline
+pub fn get_germline(
+    species: Species,
+    gene: Gene,
+    allele: Option<usize>,
+) -> Option<Allele<'static>> {
+    crate::germlines(species).and_then(|g| g.find(gene, allele))
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 /// The selection rules for iterating over all alleles in a selection of germlines.
 pub struct Selection {
+    /// The species you want, None allows all, otherwise only the species specified will be returned
+    pub species: Option<HashSet<Species>>,
     /// The kind of alleles you want, None allows all, otherwise only the kinds specified will be returned
     pub kinds: Option<HashSet<Kind>>,
     /// The kind of segments you want, None allows all, otherwise only the segments specified will be returned
@@ -16,23 +27,42 @@ pub struct Selection {
 }
 
 impl Selection {
-    /// Builder pattern method to add a kind selection
+    /// Builder pattern method to add a species selection, will replace any previously set selection
+    pub fn species(self, species: impl Into<HashSet<Species>>) -> Self {
+        Self {
+            species: Some(species.into()),
+            ..self
+        }
+    }
+    /// Builder pattern method to add a kind selection, will replace any previously set selection
     pub fn kind(self, kinds: impl Into<HashSet<Kind>>) -> Self {
         Self {
             kinds: Some(kinds.into()),
             ..self
         }
     }
-    /// Builder pattern method to add a segment selection
+    /// Builder pattern method to add a segment selection, will replace any previously set selection
     pub fn segment(self, segments: impl Into<HashSet<Segment>>) -> Self {
         Self {
             segments: Some(segments.into()),
             ..self
         }
     }
-    /// Builder pattern method to add an allele selection
+    /// Builder pattern method to add an allele selection, will replace any previously set selection
     pub fn allele(self, allele: AlleleSelection) -> Self {
         Self { allele, ..self }
+    }
+    /// Get the selected alleles
+    pub fn germlines(&self) -> impl Iterator<Item = Allele<'_>> {
+        crate::all_germlines()
+            .filter(|g| {
+                self.species
+                    .as_ref()
+                    .map(|s| s.contains(&g.species))
+                    .unwrap_or(true)
+            })
+            .flat_map(|g| GermlinesIterator::new(self, g))
+            .flatten()
     }
 }
 
@@ -40,6 +70,7 @@ impl Default for Selection {
     /// Get a default selection, which gives all kinds and segments but only returns the first allele
     fn default() -> Self {
         Self {
+            species: None,
             kinds: None,
             segments: None,
             allele: AlleleSelection::First,
@@ -61,7 +92,7 @@ pub enum AlleleSelection {
 #[derive(Debug)]
 pub struct Allele<'a> {
     /// The gene where this is the sequence for, eg `IGHV3-23`
-    pub gene: &'a Gene,
+    pub gene: std::borrow::Cow<'a, Gene>,
     /// The allele number, in IMGT this follows the name, eg `*01` is the allele in `IGHV3-23*01`
     pub allele: usize,
     /// The actual sequence, the sequences are flat amino acids, no modification of any way shape or form
@@ -111,6 +142,31 @@ impl Germlines {
         selection: &'a Selection,
     ) -> Option<impl Iterator<Item = Allele<'a>> + 'a> {
         GermlinesIterator::new(selection, self)
+    }
+
+    pub fn find<'a>(&'a self, gene: Gene, allele: Option<usize>) -> Option<Allele<'a>> {
+        let chain = self.index(gene.kind);
+        let genes = match gene.segment {
+            Segment::V => &chain.variable,
+            Segment::J => &chain.joining,
+            Segment::C(_) => &chain.constant,
+        };
+        genes
+            .binary_search_by(|g| g.name.cmp(&gene))
+            .ok()
+            .and_then(|g| {
+                let g = &genes[g];
+                allele
+                    .map(|a| g.alleles.iter().find(|(ga, _)| a == *ga))
+                    .unwrap_or(g.alleles.first())
+            })
+            .map(move |(a, seq)| Allele {
+                gene: std::borrow::Cow::Owned(gene),
+                allele: *a,
+                sequence: &seq.sequence,
+                regions: &seq.regions,
+                annotations: &seq.conserved,
+            })
     }
 
     // TODO: Make a find method which finds a specific germline (does binary search on the name and then either gives the first allele or a specific one)
@@ -329,7 +385,7 @@ impl<'a> Iterator for AllelesIterator<'a> {
             let res = &sub[self.sub_index];
             self.sub_index += 1;
             Some(Allele {
-                gene: &germline.name,
+                gene: std::borrow::Cow::Borrowed(&germline.name),
                 allele: res.0,
                 sequence: &res.1.sequence,
                 regions: &res.1.regions,

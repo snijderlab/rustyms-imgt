@@ -7,8 +7,8 @@ use super::species::Species;
 
 /// A selection of germlines from a single species. Use the [`Self::get`] method to retrieve the sequences you are interested in.
 #[derive(Serialize, Deserialize, Debug)]
-pub struct Germlines {
-    species: Species,
+pub(crate) struct Germlines {
+    pub(crate) species: Species,
     pub(crate) h: Chain,
     pub(crate) k: Chain,
     pub(crate) l: Chain,
