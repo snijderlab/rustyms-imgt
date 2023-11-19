@@ -77,15 +77,11 @@ impl Selection {
                     .map(|s| s.contains(segment))
                     .unwrap_or(true)
             })
-            .flat_map(|(species, _, germlines)| {
-                germlines
-                    .iter()
-                    .take(self.allele.take_num())
-                    .map(move |a| (species, a))
-            })
+            .flat_map(|(species, _, germlines)| germlines.iter().map(move |a| (species, a)))
             .flat_map(move |(species, germline)| {
                 germline
                     .into_iter()
+                    .take(self.allele.take_num())
                     .map(move |(a, seq)| (species, &germline.name, *a, seq))
             })
             .map(Into::into)
@@ -115,14 +111,12 @@ impl Selection {
                     .unwrap_or(true)
             })
             .flat_map(|(species, _, germlines)| {
-                germlines
-                    .into_par_iter()
-                    .take(self.allele.take_num())
-                    .map(move |a| (species, a))
+                germlines.into_par_iter().map(move |a| (species, a))
             })
             .flat_map(move |(species, germline)| {
                 germline
                     .into_par_iter()
+                    .take(self.allele.take_num())
                     .map(move |(a, seq)| (species, &germline.name, *a, seq))
             })
             .map(Into::into)
