@@ -12,7 +12,7 @@ pub fn get_germline(
     gene: Gene,
     allele: Option<usize>,
 ) -> Option<Allele<'static>> {
-    crate::germlines(species).and_then(|g| g.find(gene, allele))
+    crate::germlines(species).and_then(|g| g.find(species, gene, allele))
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -63,25 +63,30 @@ impl Selection {
                     .map(|s| s.contains(&g.species))
                     .unwrap_or(true)
             })
-            .flat_map(|g| g.into_iter())
-            .filter(|(kind, _)| {
+            .flat_map(|g| g.into_iter().map(|c| (g.species, c.0, c.1)))
+            .filter(|(_, kind, _)| {
                 self.kinds
                     .as_ref()
                     .map(|k| k.contains(kind))
                     .unwrap_or(true)
             })
-            .flat_map(|(_, c)| c.into_iter())
-            .filter(|(segment, _)| {
+            .flat_map(|(species, _, c)| c.into_iter().map(move |g| (species, g.0, g.1)))
+            .filter(|(_, segment, _)| {
                 self.segments
                     .as_ref()
                     .map(|s| s.contains(segment))
                     .unwrap_or(true)
             })
-            .flat_map(|(_, germlines)| germlines.iter())
-            .flat_map(|germline| {
+            .flat_map(|(species, _, germlines)| {
+                germlines
+                    .iter()
+                    .take(self.allele.take_num())
+                    .map(move |a| (species, a))
+            })
+            .flat_map(move |(species, germline)| {
                 germline
                     .into_iter()
-                    .map(|(a, seq)| (&germline.name, *a, seq))
+                    .map(move |(a, seq)| (species, &germline.name, *a, seq))
             })
             .map(Into::into)
     }
@@ -95,25 +100,30 @@ impl Selection {
                     .map(|s| s.contains(&g.species))
                     .unwrap_or(true)
             })
-            .flat_map(|g| g.into_par_iter())
-            .filter(|(kind, _)| {
+            .flat_map(|g| g.into_par_iter().map(|c| (g.species, c.0, c.1)))
+            .filter(|(_, kind, _)| {
                 self.kinds
                     .as_ref()
                     .map(|k| k.contains(kind))
                     .unwrap_or(true)
             })
-            .flat_map(|(_, c)| c.into_par_iter())
-            .filter(|(segment, _)| {
+            .flat_map(|(species, _, c)| c.into_par_iter().map(move |g| (species, g.0, g.1)))
+            .filter(|(_, segment, _)| {
                 self.segments
                     .as_ref()
                     .map(|s| s.contains(segment))
                     .unwrap_or(true)
             })
-            .flat_map(|(_, germlines)| germlines.into_par_iter())
-            .flat_map(|germline| {
+            .flat_map(|(species, _, germlines)| {
+                germlines
+                    .into_par_iter()
+                    .take(self.allele.take_num())
+                    .map(move |a| (species, a))
+            })
+            .flat_map(move |(species, germline)| {
                 germline
                     .into_par_iter()
-                    .map(|(a, seq)| (&germline.name, *a, seq))
+                    .map(move |(a, seq)| (species, &germline.name, *a, seq))
             })
             .map(Into::into)
     }
@@ -140,10 +150,21 @@ pub enum AlleleSelection {
     First,
 }
 
+impl AlleleSelection {
+    fn take_num(&self) -> usize {
+        match self {
+            Self::First => 1,
+            Self::All => usize::MAX,
+        }
+    }
+}
+
 /// A returned allele
 #[non_exhaustive]
 #[derive(Debug)]
 pub struct Allele<'a> {
+    /// The species where this gene originates from
+    pub species: Species,
     /// The gene where this is the sequence for, eg `IGHV3-23`
     pub gene: std::borrow::Cow<'a, Gene>,
     /// The allele number, in IMGT this follows the name, eg `*01` is the allele in `IGHV3-23*01`
@@ -188,20 +209,21 @@ impl<'a> Allele<'a> {
     }
 }
 
-impl<'a> From<(&'a Gene, usize, &'a AnnotatedSequence)> for Allele<'a> {
-    fn from(value: (&'a Gene, usize, &'a AnnotatedSequence)) -> Self {
+impl<'a> From<(Species, &'a Gene, usize, &'a AnnotatedSequence)> for Allele<'a> {
+    fn from(value: (Species, &'a Gene, usize, &'a AnnotatedSequence)) -> Self {
         Self {
-            gene: std::borrow::Cow::Borrowed(value.0),
-            allele: value.1,
-            sequence: &value.2.sequence,
-            regions: &value.2.regions,
-            annotations: &value.2.conserved,
+            species: value.0,
+            gene: std::borrow::Cow::Borrowed(value.1),
+            allele: value.2,
+            sequence: &value.3.sequence,
+            regions: &value.3.regions,
+            annotations: &value.3.conserved,
         }
     }
 }
 
 impl Germlines {
-    pub fn find(&self, gene: Gene, allele: Option<usize>) -> Option<Allele<'_>> {
+    pub fn find(&self, species: Species, gene: Gene, allele: Option<usize>) -> Option<Allele<'_>> {
         let chain = match gene.kind {
             Kind::Heavy => &self.h,
             Kind::LightKappa => &self.k,
@@ -223,6 +245,7 @@ impl Germlines {
                     .unwrap_or(g.alleles.first())
             })
             .map(move |(a, seq)| Allele {
+                species,
                 gene: std::borrow::Cow::Owned(gene),
                 allele: *a,
                 sequence: &seq.sequence,
