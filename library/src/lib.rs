@@ -6,6 +6,6 @@ mod select;
 #[path = "../../shared/mod.rs"]
 mod shared;
 
-use germlines::{all_germlines, germlines};
+use germlines::{all_germlines, germlines, par_germlines};
 pub use select::*;
 pub use shared::*;

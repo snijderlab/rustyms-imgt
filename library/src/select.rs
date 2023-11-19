@@ -1,3 +1,5 @@
+#[cfg(feature = "rayon")]
+use rayon::prelude::*;
 use std::collections::HashSet;
 
 use rustyms::LinearPeptide;
@@ -61,8 +63,59 @@ impl Selection {
                     .map(|s| s.contains(&g.species))
                     .unwrap_or(true)
             })
-            .flat_map(|g| GermlinesIterator::new(self, g))
-            .flatten()
+            .flat_map(|g| g.into_iter())
+            .filter(|(kind, _)| {
+                self.kinds
+                    .as_ref()
+                    .map(|k| k.contains(kind))
+                    .unwrap_or(true)
+            })
+            .flat_map(|(_, c)| c.into_iter())
+            .filter(|(segment, _)| {
+                self.segments
+                    .as_ref()
+                    .map(|s| s.contains(segment))
+                    .unwrap_or(true)
+            })
+            .flat_map(|(_, germlines)| germlines.iter())
+            .flat_map(|germline| {
+                germline
+                    .into_iter()
+                    .map(|(a, seq)| (&germline.name, *a, seq))
+            })
+            .map(Into::into)
+    }
+    #[cfg(feature = "rayon")]
+    /// Get the selected alleles in parallel fashion, only available if you enable the feature "rayon" (on by default)
+    pub fn par_germlines(&self) -> impl ParallelIterator<Item = Allele<'_>> {
+        crate::par_germlines()
+            .filter(|g| {
+                self.species
+                    .as_ref()
+                    .map(|s| s.contains(&g.species))
+                    .unwrap_or(true)
+            })
+            .flat_map(|g| g.into_par_iter())
+            .filter(|(kind, _)| {
+                self.kinds
+                    .as_ref()
+                    .map(|k| k.contains(kind))
+                    .unwrap_or(true)
+            })
+            .flat_map(|(_, c)| c.into_par_iter())
+            .filter(|(segment, _)| {
+                self.segments
+                    .as_ref()
+                    .map(|s| s.contains(segment))
+                    .unwrap_or(true)
+            })
+            .flat_map(|(_, germlines)| germlines.into_par_iter())
+            .flat_map(|germline| {
+                germline
+                    .into_par_iter()
+                    .map(|(a, seq)| (&germline.name, *a, seq))
+            })
+            .map(Into::into)
     }
 }
 
@@ -135,17 +188,26 @@ impl<'a> Allele<'a> {
     }
 }
 
-impl Germlines {
-    /// Retrieve the actual sequences fitting to the given selection rules.
-    pub fn get<'a>(
-        &'static self,
-        selection: &'a Selection,
-    ) -> Option<impl Iterator<Item = Allele<'a>> + 'a> {
-        GermlinesIterator::new(selection, self)
+impl<'a> From<(&'a Gene, usize, &'a AnnotatedSequence)> for Allele<'a> {
+    fn from(value: (&'a Gene, usize, &'a AnnotatedSequence)) -> Self {
+        Self {
+            gene: std::borrow::Cow::Borrowed(value.0),
+            allele: value.1,
+            sequence: &value.2.sequence,
+            regions: &value.2.regions,
+            annotations: &value.2.conserved,
+        }
     }
+}
 
-    pub fn find<'a>(&'a self, gene: Gene, allele: Option<usize>) -> Option<Allele<'a>> {
-        let chain = self.index(gene.kind);
+impl Germlines {
+    pub fn find(&self, gene: Gene, allele: Option<usize>) -> Option<Allele<'_>> {
+        let chain = match gene.kind {
+            Kind::Heavy => &self.h,
+            Kind::LightKappa => &self.k,
+            Kind::LightLambda => &self.l,
+            Kind::I => &self.i,
+        };
         let genes = match gene.segment {
             Segment::V => &chain.variable,
             Segment::J => &chain.joining,
@@ -168,248 +230,20 @@ impl Germlines {
                 annotations: &seq.conserved,
             })
     }
-
-    // TODO: Make a find method which finds a specific germline (does binary search on the name and then either gives the first allele or a specific one)
-
-    fn index(&self, index: Kind) -> &Chain {
-        match index {
-            Kind::Heavy => &self.h,
-            Kind::LightKappa => &self.k,
-            Kind::LightLambda => &self.l,
-            Kind::I => &self.i,
-        }
-    }
-}
-
-impl Chain {
-    fn index<'a>(&'a self, selection: &'a Selection, index: Segment) -> AllelesIterator<'a> {
-        AllelesIterator {
-            selection,
-            index: 0,
-            elements: match index {
-                Segment::V => &self.variable,
-                Segment::J => &self.joining,
-                Segment::C(_) => &self.constant,
-            },
-            sub_index: 0,
-            sub_elements: None,
-        }
-    }
-}
-
-impl Kind {
-    fn next(&self) -> Option<Self> {
-        match self {
-            Self::Heavy => Some(Self::LightKappa),
-            Self::LightKappa => Some(Self::LightLambda),
-            Self::LightLambda => Some(Self::I),
-            Self::I => None,
-        }
-    }
-}
-
-struct GermlinesIterator<'a> {
-    selection: &'a Selection,
-    germlines: &'static Germlines,
-    iter: ChainsIterator<'a>,
-    index: Kind,
-}
-
-impl<'a> GermlinesIterator<'a> {
-    fn new(selection: &'a Selection, germlines: &'static Germlines) -> Option<Self> {
-        let mut index = Kind::Heavy;
-        let (iter, index) = (|| {
-            if let Some(kinds) = &selection.kinds {
-                if kinds.contains(&index) {
-                    return Some((
-                        ChainsIterator::new(selection, germlines.index(index))?,
-                        index,
-                    ));
-                }
-                while let Some(i) = index.next() {
-                    index = i;
-                    if kinds.contains(&index) {
-                        return Some((
-                            ChainsIterator::new(selection, germlines.index(index))?,
-                            index,
-                        ));
-                    }
-                }
-                None
-            } else {
-                Some((
-                    ChainsIterator::new(selection, germlines.index(index))?,
-                    index.next().unwrap_or(Kind::I),
-                ))
-            }
-        })()?;
-        Some(Self {
-            selection,
-            germlines,
-            iter,
-            index,
-        })
-    }
-}
-
-impl<'a> Iterator for GermlinesIterator<'a> {
-    type Item = Allele<'a>;
-    fn next(&mut self) -> Option<Self::Item> {
-        let mut next = self.iter.next();
-        while next.is_none() {
-            if self.selection.kinds.is_none() {
-                self.iter = ChainsIterator::new(self.selection, self.germlines.index(self.index))?;
-                self.index = Kind::try_from(self.index as usize + 1).ok()?;
-            } else if let Some(kinds) = &self.selection.kinds {
-                for index in self.index as usize..=Kind::I as usize {
-                    let index = Kind::try_from(index).ok()?;
-                    if kinds.contains(&index) {
-                        self.iter =
-                            ChainsIterator::new(self.selection, self.germlines.index(self.index))?;
-                        self.index =
-                            Kind::try_from((index as usize + 1).max(Kind::I as usize)).ok()?; // +1
-                        break;
-                    }
-                }
-                return None;
-            }
-            next = self.iter.next();
-        }
-        next
-    }
-}
-
-impl Segment {
-    fn next(&self) -> Option<Self> {
-        match self {
-            Self::V => Some(Self::J),
-            Self::J => Some(Self::C(None)),
-            Self::C(_) => None,
-        }
-    }
-}
-
-struct ChainsIterator<'a> {
-    selection: &'a Selection,
-    chain: &'static Chain,
-    iter: AllelesIterator<'a>,
-    index: Segment,
-}
-
-impl<'a> ChainsIterator<'a> {
-    fn new(selection: &'a Selection, chain: &'static Chain) -> Option<Self> {
-        let mut index = Segment::V;
-        let (iter, index) = (|| {
-            if let Some(segments) = &selection.segments {
-                if segments.contains(&index) {
-                    return Some((chain.index(selection, index), index));
-                }
-                while let Some(i) = index.next() {
-                    index = i;
-                    if segments.contains(&index) {
-                        return Some((chain.index(selection, index), index));
-                    }
-                }
-                None
-            } else {
-                Some((
-                    chain.index(selection, index),
-                    index.next().unwrap_or(Segment::C(None)),
-                ))
-            }
-        })()?;
-        Some(Self {
-            selection,
-            chain,
-            iter,
-            index,
-        })
-    }
-}
-
-impl<'a> Iterator for ChainsIterator<'a> {
-    type Item = Allele<'a>;
-    fn next(&mut self) -> Option<Self::Item> {
-        let mut next = self.iter.next();
-        while next.is_none() {
-            if self.selection.segments.is_none() {
-                self.iter = self.chain.index(self.selection, self.index);
-                self.index = self.index.next()?;
-            } else if let Some(segments) = &self.selection.segments {
-                while let Some(index) = self.index.next() {
-                    self.index = index;
-                    if segments.contains(&index) {
-                        // TODO: Allow Constant(None) to select all constant chains
-                        self.iter = self.chain.index(self.selection, self.index);
-                        break;
-                    }
-                }
-                return None;
-            }
-            next = self.iter.next();
-        }
-        next
-    }
-}
-
-struct AllelesIterator<'a> {
-    selection: &'a Selection,
-    index: usize,
-    elements: &'a [Germline],
-    sub_index: usize,
-    sub_elements: Option<(&'a Germline, &'a [(usize, AnnotatedSequence)])>,
-}
-
-impl<'a> Iterator for AllelesIterator<'a> {
-    type Item = Allele<'a>;
-    fn next(&mut self) -> Option<Self::Item> {
-        if self.index >= self.elements.len() {
-            return None;
-        }
-        if self.sub_elements.is_none() || self.sub_index >= self.sub_elements.unwrap().1.len() {
-            self.sub_elements = match self.selection.allele {
-                AlleleSelection::First => Some((
-                    &self.elements[self.index],
-                    &self.elements[self.index].alleles[0..1],
-                )),
-                AlleleSelection::All => Some((
-                    &self.elements[self.index],
-                    &self.elements[self.index].alleles[..],
-                )),
-            };
-            self.sub_index = 0;
-            self.index += 1;
-        }
-
-        if let Some((germline, sub)) = self.sub_elements {
-            let res = &sub[self.sub_index];
-            self.sub_index += 1;
-            Some(Allele {
-                gene: std::borrow::Cow::Borrowed(&germline.name),
-                allele: res.0,
-                sequence: &res.1.sequence,
-                regions: &res.1.regions,
-                annotations: &res.1.conserved,
-            })
-        } else {
-            None
-        }
-    }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::germlines;
     use crate::Selection;
     use crate::{Kind, Segment, Species};
 
     #[test]
     fn try_first_human() {
-        let germlines = germlines(Species::HomoSapiens).unwrap();
         let selection = Selection::default()
+            .species([Species::HomoSapiens])
             .kind([Kind::Heavy])
             .segment([Segment::V]);
-        let first = germlines.get(&selection).unwrap().next().unwrap();
+        let first = selection.germlines().next().unwrap();
         assert_eq!(first.name(), "IGHV1-2*01");
     }
 }

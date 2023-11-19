@@ -35,6 +35,39 @@ impl Germlines {
     }
 }
 
+impl<'a> IntoIterator for &'a Germlines {
+    type IntoIter = std::array::IntoIter<(Kind, &'a Chain), 4>;
+    type Item = (Kind, &'a Chain);
+
+    fn into_iter(self) -> Self::IntoIter {
+        [
+            (Kind::Heavy, &self.h),
+            (Kind::LightKappa, &self.k),
+            (Kind::LightLambda, &self.l),
+            (Kind::I, &self.i),
+        ]
+        .into_iter()
+    }
+}
+
+#[cfg(feature = "rayon")]
+use rayon::prelude::*;
+#[cfg(feature = "rayon")]
+impl<'a> IntoParallelIterator for &'a Germlines {
+    type Iter = rayon::array::IntoIter<(Kind, &'a Chain), 4>;
+    type Item = (Kind, &'a Chain);
+
+    fn into_par_iter(self) -> Self::Iter {
+        [
+            (Kind::Heavy, &self.h),
+            (Kind::LightKappa, &self.k),
+            (Kind::LightLambda, &self.l),
+            (Kind::I, &self.i),
+        ]
+        .into_par_iter()
+    }
+}
+
 #[derive(Serialize, Deserialize, Default, Debug)]
 pub(crate) struct Chain {
     pub variable: Vec<Germline>,
@@ -77,10 +110,58 @@ impl Chain {
     }
 }
 
+impl<'a> IntoIterator for &'a Chain {
+    type IntoIter = std::array::IntoIter<(Segment, &'a [Germline]), 3>;
+    type Item = (Segment, &'a [Germline]);
+
+    fn into_iter(self) -> Self::IntoIter {
+        [
+            (Segment::V, self.variable.as_slice()),
+            (Segment::J, self.joining.as_slice()),
+            (Segment::C(None), self.constant.as_slice()),
+        ]
+        .into_iter()
+    }
+}
+
+#[cfg(feature = "rayon")]
+impl<'a> IntoParallelIterator for &'a Chain {
+    type Iter = rayon::array::IntoIter<(Segment, &'a [Germline]), 3>;
+    type Item = (Segment, &'a [Germline]);
+
+    fn into_par_iter(self) -> Self::Iter {
+        [
+            (Segment::V, self.variable.as_slice()),
+            (Segment::J, self.joining.as_slice()),
+            (Segment::C(None), self.constant.as_slice()),
+        ]
+        .into_par_iter()
+    }
+}
+
 #[derive(Serialize, Deserialize, Debug)]
 pub(crate) struct Germline {
     pub name: Gene,
     pub alleles: Vec<(usize, AnnotatedSequence)>,
+}
+
+impl<'a> IntoIterator for &'a Germline {
+    type IntoIter = std::slice::Iter<'a, (usize, AnnotatedSequence)>;
+    type Item = &'a (usize, AnnotatedSequence);
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.alleles.iter()
+    }
+}
+
+#[cfg(feature = "rayon")]
+impl<'a> IntoParallelIterator for &'a Germline {
+    type Iter = rayon::slice::Iter<'a, (usize, AnnotatedSequence)>;
+    type Item = &'a (usize, AnnotatedSequence);
+
+    fn into_par_iter(self) -> Self::Iter {
+        self.alleles.par_iter()
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug)]

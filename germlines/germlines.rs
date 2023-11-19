@@ -1,8 +1,7 @@
 #![allow(non_snake_case,non_upper_case_globals)]
 use std::sync::OnceLock;
 use crate::shared::{Germlines, Species};
-/// Get the germlines for any of the available species. See the tables below for which species have which data available.
-///
+/// Get the germlines for any of the available species. See the main documentation for which species have which data available.
 pub fn germlines(species: Species) -> Option<&'static Germlines> {match species {
 Species::BosTaurus => Some(lock_BosTaurus()),
 Species::CamelusDromedarius => Some(lock_CamelusDromedarius()),
@@ -33,7 +32,7 @@ Species::SalmoSalar => Some(lock_SalmoSalar()),
 Species::SusScrofa => Some(lock_SusScrofa()),
 Species::VicugnaPacos => Some(lock_VicugnaPacos()),
 _=>None}}
-/// Get all germlines in one iterator, see [`germlines()`] for more information about the available germlines
+/// Get all germlines in one iterator, see the main documentation for more information about the available germlines
 pub fn all_germlines() -> impl std::iter::Iterator<Item = &'static Germlines> {
 std::iter::once(lock_BosTaurus())
 .chain(std::iter::once(lock_CamelusDromedarius()))
@@ -63,6 +62,40 @@ std::iter::once(lock_BosTaurus())
 .chain(std::iter::once(lock_SalmoSalar()))
 .chain(std::iter::once(lock_SusScrofa()))
 .chain(std::iter::once(lock_VicugnaPacos()))
+}
+/// Get all germlines in one parallel iterator, see the main documentation for more information about the available germlines
+#[cfg(feature = "rayon")]
+use rayon::prelude::*;
+#[cfg(feature = "rayon")]
+pub fn par_germlines() -> impl rayon::prelude::ParallelIterator<Item = &'static Germlines> {
+rayon::iter::once(lock_BosTaurus())
+.chain(rayon::iter::once(lock_CamelusDromedarius()))
+.chain(rayon::iter::once(lock_CanisLupusFamiliaris()))
+.chain(rayon::iter::once(lock_CapraHircus()))
+.chain(rayon::iter::once(lock_DanioRerio()))
+.chain(rayon::iter::once(lock_EquusCaballus()))
+.chain(rayon::iter::once(lock_FelisCatus()))
+.chain(rayon::iter::once(lock_GallusGallus()))
+.chain(rayon::iter::once(lock_GorillaGorillaGorilla()))
+.chain(rayon::iter::once(lock_HomoSapiens()))
+.chain(rayon::iter::once(lock_IctalurusPunctatus()))
+.chain(rayon::iter::once(lock_LemurCatta()))
+.chain(rayon::iter::once(lock_MacacaFascicularis()))
+.chain(rayon::iter::once(lock_MacacaMulatta()))
+.chain(rayon::iter::once(lock_MusMusculus()))
+.chain(rayon::iter::once(lock_MusMusculusDomesticus()))
+.chain(rayon::iter::once(lock_MusSpretus()))
+.chain(rayon::iter::once(lock_MustelaPutoriusFuro()))
+.chain(rayon::iter::once(lock_OncorhynchusMykiss()))
+.chain(rayon::iter::once(lock_OrnithorhynchusAnatinus()))
+.chain(rayon::iter::once(lock_OryctolagusCuniculus()))
+.chain(rayon::iter::once(lock_OvisAries()))
+.chain(rayon::iter::once(lock_PongoAbelii()))
+.chain(rayon::iter::once(lock_PongoPygmaeus()))
+.chain(rayon::iter::once(lock_RattusNorvegicus()))
+.chain(rayon::iter::once(lock_SalmoSalar()))
+.chain(rayon::iter::once(lock_SusScrofa()))
+.chain(rayon::iter::once(lock_VicugnaPacos()))
 }
 static LOCK_BosTaurus: OnceLock<Germlines> = OnceLock::new();
 fn lock_BosTaurus()->&'static Germlines{LOCK_BosTaurus.get_or_init(|| {bincode::deserialize(include_bytes!("Domestic bovine.bin")).unwrap()})}

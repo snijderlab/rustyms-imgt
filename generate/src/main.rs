@@ -44,8 +44,7 @@ fn main() {
         "#![allow(non_snake_case,non_upper_case_globals)]\nuse std::sync::OnceLock;\nuse crate::shared::{{Germlines, Species}};"
     )
     .unwrap();
-    writeln!(output, "/// Get the germlines for any of the available species. See the tables below for which species have which data available.").unwrap();
-    writeln!(output, "///").unwrap();
+    writeln!(output, "/// Get the germlines for any of the available species. See the main documentation for which species have which data available.").unwrap();
     let mut found_species = Vec::new();
     let mut found_germlines: Vec<(Species, Germlines)> = grouped.into_iter().collect();
     found_germlines.sort_unstable_by_key(|g| g.0);
@@ -77,6 +76,7 @@ _Number of genes / number of alleles_
         file.write_all(&bincode::serialize::<Germlines>(&germlines).unwrap())
             .unwrap();
     }
+    // germlines
     writeln!(
         output,
         "pub fn germlines(species: Species) -> Option<&'static Germlines> {{match species {{"
@@ -87,9 +87,11 @@ _Number of genes / number of alleles_
         writeln!(output, "Species::{0} => Some(lock_{0}()),", species.ident()).unwrap();
     }
     writeln!(output, "_=>None}}}}").unwrap();
+    // all_germlines
     writeln!(
         output,
-        "/// Get all germlines in one iterator, see [`germlines()`] for more information about the available germlines\npub fn all_germlines() -> impl std::iter::Iterator<Item = &'static Germlines> {{"
+"/// Get all germlines in one iterator, see the main documentation for more information about the available germlines
+pub fn all_germlines() -> impl std::iter::Iterator<Item = &'static Germlines> {{"
     )
     .unwrap();
     let mut first = true;
@@ -107,11 +109,37 @@ _Number of genes / number of alleles_
         }
     }
     writeln!(output, "}}").unwrap();
+    // par_germlines
+    writeln!(
+        output,
+"/// Get all germlines in one parallel iterator, see the main documentation for more information about the available germlines
+#[cfg(feature = \"rayon\")]
+use rayon::prelude::*;
+#[cfg(feature = \"rayon\")]
+pub fn par_germlines() -> impl rayon::prelude::ParallelIterator<Item = &'static Germlines> {{"
+    )
+    .unwrap();
+    let mut first = true;
+    for species in &found_species {
+        if first {
+            first = false;
+            writeln!(output, "rayon::iter::once(lock_{}())", species.ident()).unwrap();
+        } else {
+            writeln!(
+                output,
+                ".chain(rayon::iter::once(lock_{}()))",
+                species.ident()
+            )
+            .unwrap();
+        }
+    }
+    writeln!(output, "}}").unwrap();
 
     for species in &found_species {
         writeln!(
             output,
-            "static LOCK_{0}: OnceLock<Germlines> = OnceLock::new();\nfn lock_{0}()->&'static Germlines{{LOCK_{0}.get_or_init(|| {{bincode::deserialize(include_bytes!(\"{species}.bin\")).unwrap()}})}}",
+"static LOCK_{0}: OnceLock<Germlines> = OnceLock::new();
+fn lock_{0}()->&'static Germlines{{LOCK_{0}.get_or_init(|| {{bincode::deserialize(include_bytes!(\"{species}.bin\")).unwrap()}})}}",
             species.ident(),
         )
         .unwrap();
