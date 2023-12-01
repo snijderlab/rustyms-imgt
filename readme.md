@@ -12,3 +12,5 @@ Folders:
 * germlines - the generated binary files + rust code to use them
 * library - the library which ends up on crates.io
 * shared - shared code between the library and generate binary
+
+Run `cargo run --release` from inside the generate folder to update the binary germline files based on the `imgt.dat.Z` in the `data` folder.
