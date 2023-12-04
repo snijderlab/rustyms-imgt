@@ -23,6 +23,7 @@ fn main() {
     let mut error = BufWriter::new(File::create("errors.dat").unwrap());
     let data = parse_dat(BufReader::new(GzDecoder::new(file)));
     let mut grouped = HashMap::new();
+    let mut errors = Vec::new();
     for element in data {
         let species = element.as_ref().unwrap().species;
         for gene in element.unwrap().genes {
@@ -32,11 +33,35 @@ fn main() {
                     .or_insert(Germlines::new(species))
                     .insert(gene),
                 Err(err) => {
-                    writeln!(error, "ERROR FOR GENE:\n{species}\t{gene}{err}\n",).unwrap();
+                    errors.push((species, gene, err));
                 }
             }
         }
         //writeln!(output, "{}", element.unwrap()).unwrap();
+    }
+
+    for (species, errors) in errors
+        .iter()
+        .map(|(species, gene, err)| (species, (gene, err)))
+        .into_group_map()
+        .into_iter()
+        .map(|(species, genes)| {
+            (
+                species,
+                genes
+                    .into_iter()
+                    .map(|(gene, err)| (gene.key.clone(), (gene, err)))
+                    .into_group_map(),
+            )
+        })
+    {
+        writeln!(error, "SPECIES: {species}").unwrap();
+        for (gene, errors) in errors {
+            writeln!(error, "GENE: {gene}").unwrap();
+            for (gene, err) in errors {
+                writeln!(error, "ERROR FOR GENE:\n{species}\t{gene}\t{err}\n").unwrap();
+            }
+        }
     }
 
     writeln!(
@@ -214,7 +239,7 @@ struct DataItem {
     sequence: String,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 struct IMGTGene {
     key: String,
     location: Location,
@@ -222,7 +247,7 @@ struct IMGTGene {
     regions: HashMap<String, Region>,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Hash, Eq, PartialEq)]
 struct Region {
     key: String,
     location: Location,
@@ -233,7 +258,7 @@ struct Region {
     partial: bool,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Hash, Eq, PartialEq)]
 enum Location {
     Normal(RangeInclusive<usize>),
     Complement(RangeInclusive<usize>),
@@ -382,13 +407,17 @@ impl DataItem {
             "FR1-IMGT",
             "FR2-IMGT",
             "FR3-IMGT",
+            "FR4-IMGT",
             "CDR1-IMGT",
             "CDR2-IMGT",
             "CDR3-IMGT",
             "1st-CYS",
             "2nd-CYS",
             "CONSERVED-TRP",
+            "J-REGION",
+            "J-TRP",
             "J-PHE",
+            "J-MOTIF",
             "CH1",
             "CH2",
             "CH3",
@@ -399,7 +428,6 @@ impl DataItem {
             "CH8",
             "CH9",
             "CHS",
-            "J-REGION",
             //"D-REGION",
         ]
         .contains(&region.key.as_str())
@@ -562,7 +590,24 @@ impl IMGTGene {
             seq.push((shared::Region::CHS, get("CHS")?)); // TODO: what if only the combined CHX-CHS is present in the database
             seq
         } else if self.key == "J-GENE" {
-            vec![(shared::Region::FR4, get("J-REGION")?)] // TODO: not fully correct right, has some CDR3 as well, and has quite some conserved residues
+            // dbg!(&self)
+            if self.regions.contains_key("FR4-IMGT") {
+                let fr4 = get("FR4-IMGT")?;
+                let j = get("J-REGION")?;
+                let cdr3 = (j.0[..j.0.len() - fr4.0.len()].to_vec(), j.1); // TODO: wrong location, breaks annotations
+                vec![(shared::Region::CDR3, cdr3), (shared::Region::FR4, fr4)]
+            } else if self.regions.contains_key("J-MOTIF") {
+                let motif = get("J-MOTIF")?;
+                let j = get("J-REGION")?;
+                let loc =
+                    j.1.get_aa_loc(&motif.1)
+                        .ok_or("J-MOTIF does not fall into J-REGION")?;
+                let cdr3 = (j.0[..*loc.start()].to_vec(), j.1.clone()); // TODO: wrong location, breaks annotations
+                let fr4 = (j.0[*loc.start()..].to_vec(), j.1);
+                vec![(shared::Region::CDR3, cdr3), (shared::Region::FR4, fr4)]
+            } else {
+                vec![(shared::Region::FR4, get("J-REGION")?)] // TODO: not fully correct right, has some CDR3 as well, and has quite some conserved residues
+            }
         } else if self.key == "D-GENE" {
             vec![(shared::Region::CDR3, get("D-REGION")?)]
         } else {
@@ -575,12 +620,13 @@ impl IMGTGene {
             ("2nd-CYS", Annotation::Cysteine2),
             ("CONSERVED-TRP", Annotation::Tryptophan),
             ("J-PHE", Annotation::Phenylalanine),
+            ("J-TRP", Annotation::Tryptophan),
         ]);
         let mut conserved = self
             .regions
             .iter()
             .filter(|(key, _)| {
-                ["1st-CYS", "2nd-CYS", "CONSERVED-TRP", "J-PHE"].contains(&key.as_str())
+                ["1st-CYS", "2nd-CYS", "CONSERVED-TRP", "J-PHE", "J-TRP"].contains(&key.as_str())
             })
             .map(|(key, region)| {
                 find_aa_location(&region.location, &regions)

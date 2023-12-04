@@ -84,15 +84,26 @@ impl Chain {
         };
 
         match db.binary_search_by_key(&germline.name, |g| g.name.clone()) {
+            // If there are multiple copies of the same region keep the one with the most annotations + regions
             Ok(index) => {
-                let allele_index = db[index]
+                match db[index]
                     .alleles
                     .binary_search_by_key(&germline.alleles[0].0, |a| a.0)
-                    .unwrap_or_else(|e| e);
-                db[index]
-                    .alleles
-                    .insert(allele_index, germline.alleles.pop().unwrap())
-            } // TODO: figure out why multiple copies can have the same allele number
+                {
+                    Ok(allele_index) => {
+                        if germline.alleles[0].1.conserved.len()
+                            + germline.alleles[0].1.regions.len()
+                            > db[index].alleles[allele_index].1.conserved.len()
+                                + db[index].alleles[allele_index].1.regions.len()
+                        {
+                            db[index].alleles[allele_index] = germline.alleles.pop().unwrap()
+                        }
+                    }
+                    Err(allele_index) => db[index]
+                        .alleles
+                        .insert(allele_index, germline.alleles.pop().unwrap()),
+                }
+            }
             Err(index) => db.insert(index, germline),
         }
     }
@@ -224,6 +235,7 @@ impl Display for Gene {
 impl Gene {
     /// Get an IMGT name with allele, eg IGHV3-23*03
     pub fn from_imgt_name_with_allele(s: &str) -> Result<(Self, usize), String> {
+        let s = s.split(" or ").next().unwrap(); // Just ignore double names
         let (gene, tail) = Self::from_imgt_name_internal(s)?;
         let allele = if let Some(tail) = tail.strip_prefix('*') {
             tail.parse()
@@ -388,6 +400,10 @@ pub enum Constant {
     E,
     G,
     M,
+    O,
+    // DD,
+    // MD,
+    T,
 }
 
 impl FromStr for Segment {
@@ -398,10 +414,14 @@ impl FromStr for Segment {
             "J" => Ok(Self::J),
             "C" => Ok(Self::C(None)),
             "A" => Ok(Self::C(Some(Constant::A))),
+            // "DD" => Ok(Self::C(Some(Constant::DD))),
+            // "MD" => Ok(Self::C(Some(Constant::MD))),
             "D" => Ok(Self::C(Some(Constant::D))),
             "E" => Ok(Self::C(Some(Constant::E))),
             "G" => Ok(Self::C(Some(Constant::G))),
             "M" => Ok(Self::C(Some(Constant::M))),
+            "O" => Ok(Self::C(Some(Constant::O))),
+            "T" => Ok(Self::C(Some(Constant::T))),
             _ => Err(()),
         }
     }
@@ -421,6 +441,10 @@ impl Display for Segment {
                 Self::C(Some(Constant::E)) => "E",
                 Self::C(Some(Constant::G)) => "G",
                 Self::C(Some(Constant::M)) => "M",
+                Self::C(Some(Constant::O)) => "O",
+                // Self::C(Some(Constant::DD)) => "DD",
+                // Self::C(Some(Constant::MD)) => "MD",
+                Self::C(Some(Constant::T)) => "T",
             }
         )
     }

@@ -2,9 +2,9 @@
 
 | Kind | V | J | C |
 |------|---|---|---|
-|IGHV|12/17|3/10|7/9|
+|IGHV|12/13|3/4|7/9|
 |IGKV|6/6|1/1|0/0|
-|IGLV|25/41|5/9|0/0|
+|IGLV|25/26|5/5|0/0|
 |IGIV|0/0|0/0|0/0|
 
 _Number of genes / number of alleles_
@@ -24,8 +24,8 @@ _Number of genes / number of alleles_
 
 | Kind | V | J | C |
 |------|---|---|---|
-|IGHV|35/35|5/5|4/9|
-|IGKV|13/24|4/8|0/0|
+|IGHV|35/35|5/5|4/6|
+|IGKV|13/17|4/4|0/0|
 |IGLV|71/71|5/5|0/0|
 |IGIV|0/0|0/0|0/0|
 
@@ -57,8 +57,8 @@ _Number of genes / number of alleles_
 
 | Kind | V | J | C |
 |------|---|---|---|
-|IGHV|19/32|6/12|10/19|
-|IGKV|17/33|4/12|0/0|
+|IGHV|19/24|6/6|10/18|
+|IGKV|17/19|4/5|0/0|
 |IGLV|0/0|0/0|0/0|
 |IGIV|0/0|0/0|0/0|
 
@@ -79,9 +79,9 @@ _Number of genes / number of alleles_
 
 | Kind | V | J | C |
 |------|---|---|---|
-|IGHV|2/3|1/3|0/0|
+|IGHV|2/2|1/1|0/0|
 |IGKV|0/0|0/0|0/0|
-|IGLV|2/3|1/3|0/0|
+|IGLV|2/3|1/1|0/0|
 |IGIV|0/0|0/0|0/0|
 
 _Number of genes / number of alleles_
@@ -90,9 +90,9 @@ _Number of genes / number of alleles_
 
 | Kind | V | J | C |
 |------|---|---|---|
-|IGHV|53/112|5/20|9/15|
-|IGKV|26/57|5/15|0/0|
-|IGLV|27/54|6/13|0/0|
+|IGHV|53/95|5/8|9/14|
+|IGKV|26/46|5/6|0/0|
+|IGLV|27/42|6/6|0/0|
 |IGIV|0/0|0/0|0/0|
 
 _Number of genes / number of alleles_
@@ -101,9 +101,9 @@ _Number of genes / number of alleles_
 
 | Kind | V | J | C |
 |------|---|---|---|
-|IGHV|55/275|6/29|10/63|
-|IGKV|40/74|5/10|0/0|
-|IGLV|26/65|4/5|0/0|
+|IGHV|55/171|6/8|10/41|
+|IGKV|40/61|5/5|0/0|
+|IGLV|26/54|4/4|0/0|
 |IGIV|0/0|0/0|0/0|
 
 _Number of genes / number of alleles_
@@ -124,7 +124,7 @@ _Number of genes / number of alleles_
 | Kind | V | J | C |
 |------|---|---|---|
 |IGHV|56/56|4/4|3/3|
-|IGKV|11/28|4/8|0/0|
+|IGKV|11/22|4/5|0/0|
 |IGLV|119/119|10/10|0/0|
 |IGIV|0/0|0/0|0/0|
 
@@ -145,9 +145,9 @@ _Number of genes / number of alleles_
 
 | Kind | V | J | C |
 |------|---|---|---|
-|IGHV|122/361|7/28|8/17|
-|IGKV|58/83|5/10|0/0|
-|IGLV|55/107|7/12|0/0|
+|IGHV|122/270|7/11|8/15|
+|IGKV|58/75|5/5|0/0|
+|IGLV|55/74|7/7|0/0|
 |IGIV|0/0|0/0|0/0|
 
 _Number of genes / number of alleles_
@@ -156,9 +156,9 @@ _Number of genes / number of alleles_
 
 | Kind | V | J | C |
 |------|---|---|---|
-|IGHV|114/252|4/14|7/12|
-|IGKV|98/211|4/8|0/0|
-|IGLV|3/8|3/14|0/0|
+|IGHV|114/152|4/6|7/10|
+|IGKV|98/111|4/4|0/0|
+|IGLV|3/5|3/3|0/0|
 |IGIV|0/0|0/0|0/0|
 
 _Number of genes / number of alleles_
@@ -200,7 +200,7 @@ _Number of genes / number of alleles_
 
 | Kind | V | J | C |
 |------|---|---|---|
-|IGHV|42/46|18/27|1/2|
+|IGHV|42/45|18/20|2/4|
 |IGKV|0/0|0/0|0/0|
 |IGLV|0/0|0/0|0/0|
 |IGIV|0/0|0/0|0/0|
@@ -211,7 +211,7 @@ _Number of genes / number of alleles_
 
 | Kind | V | J | C |
 |------|---|---|---|
-|IGHV|34/34|10/10|6/6|
+|IGHV|34/34|10/10|7/7|
 |IGKV|0/0|0/0|0/0|
 |IGLV|0/0|0/0|0/0|
 |IGIV|0/0|0/0|0/0|
@@ -222,8 +222,8 @@ _Number of genes / number of alleles_
 
 | Kind | V | J | C |
 |------|---|---|---|
-|IGHV|9/11|6/15|7/8|
-|IGKV|5/7|5/10|0/0|
+|IGHV|9/9|6/11|7/8|
+|IGKV|5/7|5/8|0/0|
 |IGLV|20/20|1/1|0/0|
 |IGIV|0/0|0/0|0/0|
 
@@ -266,9 +266,9 @@ _Number of genes / number of alleles_
 
 | Kind | V | J | C |
 |------|---|---|---|
-|IGHV|97/109|4/5|7/8|
+|IGHV|97/97|4/4|7/8|
 |IGKV|20/20|6/6|0/0|
-|IGLV|7/7|2/3|0/0|
+|IGLV|7/7|2/2|0/0|
 |IGIV|0/0|0/0|0/0|
 
 _Number of genes / number of alleles_
@@ -277,7 +277,7 @@ _Number of genes / number of alleles_
 
 | Kind | V | J | C |
 |------|---|---|---|
-|IGHV|66/80|19/26|2/4|
+|IGHV|67/72|19/19|4/6|
 |IGKV|0/0|0/0|0/0|
 |IGLV|0/0|0/0|0/0|
 |IGIV|0/0|0/0|0/0|
@@ -288,9 +288,9 @@ _Number of genes / number of alleles_
 
 | Kind | V | J | C |
 |------|---|---|---|
-|IGHV|6/6|5/10|10/20|
-|IGKV|11/19|5/10|0/0|
-|IGLV|10/17|3/4|0/0|
+|IGHV|6/6|5/5|10/13|
+|IGKV|11/19|5/7|0/0|
+|IGLV|10/14|3/4|0/0|
 |IGIV|0/0|0/0|0/0|
 
 _Number of genes / number of alleles_
