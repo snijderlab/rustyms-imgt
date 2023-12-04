@@ -167,7 +167,9 @@ impl<'a> IntoParallelIterator for &'a Germline {
 #[derive(Serialize, Deserialize, Debug)]
 pub(crate) struct AnnotatedSequence {
     pub sequence: LinearPeptide,
+    /// The different regions in the sequence, defined by their name and length
     pub regions: Vec<(Region, usize)>,
+    /// 0 based locations of single amino acid annotations, overlapping with the regions defined above
     pub conserved: Vec<(Annotation, usize)>,
 }
 
@@ -481,6 +483,7 @@ pub enum Annotation {
     Cysteine2,
     Tryptophan,
     Phenylalanine,
+    NGlycan,
 }
 
 impl Display for Annotation {
@@ -493,6 +496,7 @@ impl Display for Annotation {
                 Self::Cysteine2 => "Cys2",
                 Self::Tryptophan => "Trp",
                 Self::Phenylalanine => "Phe",
+                Self::NGlycan => "NGly",
             }
         )
     }

@@ -253,16 +253,16 @@ impl Location {
         }
     }
 
-    fn get_aa_loc(&self, inner: &Self) -> RangeInclusive<usize> {
+    fn get_aa_loc(&self, inner: &Self) -> Option<RangeInclusive<usize>> {
         match (self, inner) {
             (Self::Complement(s), Self::Complement(o)) | (Self::Normal(s), Self::Normal(o)) => {
-                (o.start() - s.start()) / 3..=(o.end() - s.start()) / 3
+                Some((o.start() - s.start()) / 3..=(o.end() - s.start()) / 3)
             }
             (Self::Normal(s), Self::SingleNormal(o))
             | (Self::Complement(s), Self::SingleComplement(o)) => {
-                (o - s.start()) / 3..=(o - s.start())
+                Some((o - s.start()) / 3..=(o - s.start()) / 3)
             }
-            _ => panic!("Invalid get_aa_loc outer/inner pairing"),
+            _ => None,
         }
     }
 }
@@ -508,17 +508,17 @@ impl Display for Region {
 
 impl IMGTGene {
     fn finish(self, species: Species) -> Result<Germline, String> {
-        let get = |key| -> Result<Vec<AminoAcid>, String> {
-            Ok(self
-                .regions
+        let get = |key| -> Result<(Vec<AminoAcid>, Location), String> {
+            self.regions
                 .get(key)
-                .ok_or(format!("Could not find {key}"))?
-                .found_seq
-                .as_ref()
-                .ok_or(format!("{key} does not have a sequence"))?
-                // .unwrap_or_else(|| panic!("No sequence for `{key}` `{}`", self.allele))
-                .1
-                .clone())
+                .ok_or(format!("Could not find {key}"))
+                .and_then(|region| {
+                    region
+                        .found_seq
+                        .as_ref()
+                        .map(|seq| (seq.1.clone(), region.location.clone()))
+                        .ok_or(format!("{key} does not have a sequence"))
+                })
         };
         let regions = if self.key == "V-GENE" {
             vec![
@@ -541,13 +541,14 @@ impl IMGTGene {
                         region,
                         self.regions
                             .get(key)
-                            .ok_or(format!("Could not find {key}"))?
-                            .found_seq
-                            .as_ref()
-                            .ok_or(format!("{key} does not have a sequence"))?
-                            // .unwrap_or_else(|| panic!("No sequence for `{key}` `{}`", self.allele))
-                            .1
-                            .clone(),
+                            .ok_or(format!("Could not find {key}"))
+                            .and_then(|region| {
+                                region
+                                    .found_seq
+                                    .as_ref()
+                                    .map(|seq| (seq.1.clone(), region.location.clone()))
+                                    .ok_or(format!("{key} does not have a sequence"))
+                            })?,
                     ))
                 }
                 Ok(())
@@ -567,33 +568,66 @@ impl IMGTGene {
         } else {
             Vec::new()
         };
-        let sequence = regions.iter().flat_map(|r| r.1.clone()).collect();
-        let regions = regions.iter().map(|r| (r.0, r.1.len())).collect();
+        let sequence: Vec<AminoAcid> = regions.iter().flat_map(|r| r.1 .0.clone()).collect();
+        let region_lengths = regions.iter().map(|r| (r.0, r.1 .0.len())).collect();
         let conserved_map = HashMap::from([
             ("1st-CYS", Annotation::Cysteine1),
             ("2nd-CYS", Annotation::Cysteine2),
             ("CONSERVED-TRP", Annotation::Tryptophan),
             ("J-PHE", Annotation::Phenylalanine),
         ]);
-        let conserved = self
+        let mut conserved = self
             .regions
             .iter()
             .filter(|(key, _)| {
                 ["1st-CYS", "2nd-CYS", "CONSERVED-TRP", "J-PHE"].contains(&key.as_str())
             })
-            .map(|(key, _)| (conserved_map[key.as_str()], 0))
-            .collect();
+            .map(|(key, region)| {
+                find_aa_location(&region.location, &regions)
+                    .map(|index| (conserved_map[key.as_str()], index))
+                    .ok_or(format!("Cannot find location of '{key}' '{region}'"))
+            })
+            .collect::<Result<Vec<_>, _>>()?;
+        conserved.extend(
+            find_possible_n_glycan_locations(&sequence)
+                .iter()
+                .map(|i| (Annotation::NGlycan, *i)),
+        );
         let (name, allele) = Gene::from_imgt_name_with_allele(self.allele.as_str())?;
         Ok(Germline {
             name,
             alleles: vec![(
                 allele,
                 AnnotatedSequence {
-                    sequence,
-                    regions,
+                    sequence: sequence.into(),
+                    regions: region_lengths,
                     conserved,
                 },
             )],
         })
     }
+}
+
+fn find_aa_location(
+    location: &Location,
+    sections: &[(shared::Region, (Vec<AminoAcid>, Location))],
+) -> Option<usize> {
+    let mut start = 0;
+    for section in sections {
+        if let Some(index) = section.1 .1.get_aa_loc(location) {
+            return Some(start + index.start());
+        }
+        start += section.1 .0.len();
+    }
+    None
+}
+
+fn find_possible_n_glycan_locations(sequence: &[AminoAcid]) -> Vec<usize> {
+    let mut result = Vec::new();
+    for (index, aa) in sequence.windows(3).enumerate() {
+        if aa[0] == AminoAcid::N && (aa[2] == AminoAcid::S || aa[2] == AminoAcid::T) {
+            result.push(index);
+        }
+    }
+    result
 }
