@@ -438,7 +438,7 @@ impl DataItem {
             "CH8",
             "CH9",
             "CHS",
-            //"D-REGION",
+            "H", //"D-REGION",
         ]
         .contains(&region.key.as_str())
         {
@@ -571,11 +571,7 @@ impl IMGTGene {
                 (shared::Region::CDR3, get("CDR3-IMGT")?),
             ]
         } else if self.key == "C-GENE" {
-            let mut seq = vec![
-                (shared::Region::CH1, get("CH1")?),
-                (shared::Region::CH2, get("CH2")?),
-                (shared::Region::CH3, get("CH3")?),
-            ];
+            let mut seq = Vec::new();
             let mut possibly_add = |region, key: &str| -> Result<(), String> {
                 if self.regions.contains_key(key) {
                     seq.push((
@@ -594,13 +590,20 @@ impl IMGTGene {
                 }
                 Ok(())
             };
+            possibly_add(shared::Region::CH1, "CH1")?;
+            possibly_add(shared::Region::H, "H")?;
+            possibly_add(shared::Region::CH2, "CH2")?;
+            possibly_add(shared::Region::CH3, "CH3")?;
             possibly_add(shared::Region::CH4, "CH4")?;
             possibly_add(shared::Region::CH5, "CH5")?;
             possibly_add(shared::Region::CH6, "CH6")?;
             possibly_add(shared::Region::CH7, "CH7")?;
             possibly_add(shared::Region::CH8, "CH8")?;
             possibly_add(shared::Region::CH9, "CH9")?;
-            seq.push((shared::Region::CHS, get("CHS")?)); // TODO: what if only the combined CHX-CHS is present in the database
+            possibly_add(shared::Region::CHS, "CHS")?; // TODO: what if only the combined CHX-CHS is present in the database
+            if seq.is_empty() {
+                return Err("Empty C sequence".to_string());
+            }
             seq
         } else if self.key == "J-GENE" {
             // dbg!(&self)
