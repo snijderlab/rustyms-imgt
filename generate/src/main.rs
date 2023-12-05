@@ -256,6 +256,7 @@ struct Region {
     allele: String,
     functional: bool,
     partial: bool,
+    shift: usize,
 }
 
 #[derive(Clone, Debug, Hash, Eq, PartialEq)]
@@ -338,7 +339,7 @@ impl DataItem {
             genes: Vec::new(),
             regions: Vec::new(),
         };
-        let mut current = None;
+        let mut current: Option<Region> = None;
         let mut sequence = false;
         for line in data.ft {
             let line = &line[5..];
@@ -351,15 +352,15 @@ impl DataItem {
                     .trim()
                     .parse()
                     .unwrap_or_else(|_| panic!("`{}` not a valid location", location));
-                let seq = result.get_sequence(&location);
                 current = Some(Region {
                     key: key.trim().to_string(),
                     location,
                     reported_seq: String::new(),
-                    found_seq: seq,
+                    found_seq: None,
                     allele: String::new(),
                     functional: false,
                     partial: false,
+                    shift: 0,
                 });
                 continue;
             }
@@ -377,6 +378,11 @@ impl DataItem {
                     }
                 } else if let Some(tail) = trimmed.strip_prefix("/IMGT_allele=\"") {
                     current.allele = tail.trim_end_matches('\"').to_string();
+                } else if let Some(tail) = trimmed.strip_prefix("/codon_start=") {
+                    current.shift = tail
+                        .parse::<usize>()
+                        .map_err(|_| format!("Not a valid codon_start: '{tail}'"))?
+                        - 1;
                 } else if trimmed.starts_with("/functional") {
                     current.functional = true;
                 } else if trimmed.starts_with("/partial") {
@@ -391,7 +397,11 @@ impl DataItem {
         Ok(result)
     }
 
-    fn add_region(&mut self, region: Region) {
+    fn add_region(&mut self, mut region: Region) {
+        // Get the actual sequence
+        region.found_seq = self.get_sequence(&region.location, region.shift);
+
+        // Determine if what this region is and if is warrants keeping
         if ["V-GENE", "C-GENE", "J-GENE"].contains(&region.key.as_str()) // , "D-GENE"
             && region.functional
             && !region.partial
@@ -444,19 +454,22 @@ impl DataItem {
         }
     }
 
-    fn get_sequence(&self, slice: &Location) -> Option<(String, Vec<AminoAcid>)> {
-        Some(translate(match slice {
-            Location::Normal(range) => self.sequence.get(range.clone())?.to_string(),
-            Location::SingleNormal(index) => {
-                char::from(*self.sequence.as_bytes().get(*index)?).to_string()
-            }
-            Location::Complement(range) => {
-                complement(self.sequence.get(range.clone())?.to_string())
-            }
-            Location::SingleComplement(index) => {
-                complement(char::from(*self.sequence.as_bytes().get(*index)?).to_string())
-            }
-        }))
+    fn get_sequence(&self, slice: &Location, shift: usize) -> Option<(String, Vec<AminoAcid>)> {
+        Some(translate(
+            &match slice {
+                Location::Normal(range) => self.sequence.get(range.clone())?.to_string(),
+                Location::SingleNormal(index) => {
+                    char::from(*self.sequence.as_bytes().get(*index)?).to_string()
+                }
+                Location::Complement(range) => {
+                    complement(self.sequence.get(range.clone())?.to_string())
+                }
+                Location::SingleComplement(index) => {
+                    complement(char::from(*self.sequence.as_bytes().get(*index)?).to_string())
+                }
+            }[shift..],
+        ))
+        .map(|(s, v)| (s.to_owned(), v))
     }
 }
 
@@ -475,7 +488,7 @@ fn complement(s: String) -> String {
     .unwrap()
 }
 
-fn translate(s: String) -> (String, Vec<AminoAcid>) {
+fn translate(s: &str) -> (&str, Vec<AminoAcid>) {
     if s.len() < 3 {
         (s, Vec::new())
     } else {
@@ -509,7 +522,7 @@ impl Display for DataItem {
 impl Display for IMGTGene {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "{}\t{}\t{}", self.key, self.location, self.allele)?;
-        for region in self.regions.values().sorted_by_key(|r| &r.key) {
+        for region in self.regions.values().sorted_by_key(|reg| &reg.key) {
             writeln!(f, "  R {region}")?;
         }
         Ok(())
@@ -613,8 +626,8 @@ impl IMGTGene {
         } else {
             Vec::new()
         };
-        let sequence: Vec<AminoAcid> = regions.iter().flat_map(|r| r.1 .0.clone()).collect();
-        let region_lengths = regions.iter().map(|r| (r.0, r.1 .0.len())).collect();
+        let sequence: Vec<AminoAcid> = regions.iter().flat_map(|reg| reg.1 .0.clone()).collect();
+        let region_lengths = regions.iter().map(|reg| (reg.0, reg.1 .0.len())).collect();
         let conserved_map = HashMap::from([
             ("1st-CYS", Annotation::Cysteine1),
             ("2nd-CYS", Annotation::Cysteine2),
