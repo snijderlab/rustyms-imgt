@@ -11,6 +11,7 @@ Species::DanioRerio => Some(lock_DanioRerio()),
 Species::EquusCaballus => Some(lock_EquusCaballus()),
 Species::FelisCatus => Some(lock_FelisCatus()),
 Species::GallusGallus => Some(lock_GallusGallus()),
+Species::GorillaGorilla => Some(lock_GorillaGorilla()),
 Species::GorillaGorillaGorilla => Some(lock_GorillaGorillaGorilla()),
 Species::HomoSapiens => Some(lock_HomoSapiens()),
 Species::IctalurusPunctatus => Some(lock_IctalurusPunctatus()),
@@ -42,6 +43,7 @@ std::iter::once(lock_BosTaurus())
 .chain(std::iter::once(lock_EquusCaballus()))
 .chain(std::iter::once(lock_FelisCatus()))
 .chain(std::iter::once(lock_GallusGallus()))
+.chain(std::iter::once(lock_GorillaGorilla()))
 .chain(std::iter::once(lock_GorillaGorillaGorilla()))
 .chain(std::iter::once(lock_HomoSapiens()))
 .chain(std::iter::once(lock_IctalurusPunctatus()))
@@ -76,6 +78,7 @@ rayon::iter::once(lock_BosTaurus())
 .chain(rayon::iter::once(lock_EquusCaballus()))
 .chain(rayon::iter::once(lock_FelisCatus()))
 .chain(rayon::iter::once(lock_GallusGallus()))
+.chain(rayon::iter::once(lock_GorillaGorilla()))
 .chain(rayon::iter::once(lock_GorillaGorillaGorilla()))
 .chain(rayon::iter::once(lock_HomoSapiens()))
 .chain(rayon::iter::once(lock_IctalurusPunctatus()))
@@ -113,6 +116,8 @@ static LOCK_FelisCatus: OnceLock<Germlines> = OnceLock::new();
 fn lock_FelisCatus()->&'static Germlines{LOCK_FelisCatus.get_or_init(|| {bincode::deserialize(include_bytes!("Domestic cat.bin")).unwrap()})}
 static LOCK_GallusGallus: OnceLock<Germlines> = OnceLock::new();
 fn lock_GallusGallus()->&'static Germlines{LOCK_GallusGallus.get_or_init(|| {bincode::deserialize(include_bytes!("Domestic chicken.bin")).unwrap()})}
+static LOCK_GorillaGorilla: OnceLock<Germlines> = OnceLock::new();
+fn lock_GorillaGorilla()->&'static Germlines{LOCK_GorillaGorilla.get_or_init(|| {bincode::deserialize(include_bytes!("Western gorilla.bin")).unwrap()})}
 static LOCK_GorillaGorillaGorilla: OnceLock<Germlines> = OnceLock::new();
 fn lock_GorillaGorillaGorilla()->&'static Germlines{LOCK_GorillaGorillaGorilla.get_or_init(|| {bincode::deserialize(include_bytes!("Western lowland gorilla.bin")).unwrap()})}
 static LOCK_HomoSapiens: OnceLock<Germlines> = OnceLock::new();

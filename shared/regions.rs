@@ -190,7 +190,7 @@ pub struct Gene {
     pub kind: Kind,
     pub segment: Segment,
     pub number: Option<usize>,
-    pub family: Vec<(usize, String)>,
+    pub family: Vec<(Option<usize>, String)>,
 }
 
 impl Display for Gene {
@@ -224,7 +224,12 @@ impl Display for Gene {
             if !first && !last_str {
                 write!(f, "-")?;
             }
-            write!(f, "{}{}", element.0, element.1)?;
+            write!(
+                f,
+                "{}{}",
+                element.0.map(|i| i.to_string()).unwrap_or_default(),
+                element.1
+            )?;
             last_str = !element.1.is_empty();
             first = false;
         }
@@ -237,6 +242,9 @@ impl Gene {
     pub fn from_imgt_name_with_allele(s: &str) -> Result<(Self, usize), String> {
         let s = s.split(" or ").next().unwrap(); // Just ignore double names
         let (gene, tail) = Self::from_imgt_name_internal(s)?;
+        if tail.is_empty() {
+            return Ok((gene, 1));
+        }
         let allele = if let Some(tail) = tail.strip_prefix('*') {
             tail.parse()
                 .map_err(|_| format!("Invalid allele spec: `{}`", &tail))
@@ -252,21 +260,26 @@ impl Gene {
     }
 
     fn from_imgt_name_internal(s: &str) -> Result<(Self, &str), String> {
-        fn parse_name(s: &str) -> (Option<(usize, String)>, &str) {
+        fn parse_name(s: &str) -> (Option<(Option<usize>, String)>, &str) {
             let num = s
                 .chars()
                 .take_while(|c| c.is_ascii_digit())
                 .collect::<String>();
-            if num.is_empty() {
-                return (None, s);
-            }
             let tail = s
                 .chars()
                 .skip(num.len())
                 .take_while(|c| c.is_ascii_alphabetic())
                 .collect::<String>();
             let rest = &s[num.len() + tail.len()..];
-            (Some((num.parse().unwrap(), tail)), rest)
+            if num.is_empty() && tail.is_empty() {
+                return (None, s);
+            }
+            let num = if num.is_empty() {
+                None
+            } else {
+                Some(num.parse().unwrap())
+            };
+            (Some((num, tail)), rest)
         }
 
         fn from_roman(s: &str) -> Option<usize> {
@@ -461,6 +474,7 @@ pub enum Region {
     FR3,
     FR4,
     CH1,
+    H,
     CH2,
     CH3,
     CH4,
@@ -486,6 +500,7 @@ impl Display for Region {
                 Self::FR3 => "FR3",
                 Self::FR4 => "FR4",
                 Self::CH1 => "CH1",
+                Self::H => "H",
                 Self::CH2 => "CH2",
                 Self::CH3 => "CH3",
                 Self::CH4 => "CH4",
@@ -524,4 +539,20 @@ impl Display for Annotation {
             }
         )
     }
+}
+
+#[test]
+fn imgt_names() {
+    assert_eq!(
+        Gene::from_imgt_name_with_allele("IGHV3-23*03")
+            .map(|(g, a)| (g.to_string(), a))
+            .unwrap(),
+        ("IGHV3-23".to_string(), 3)
+    );
+    assert_eq!(
+        Gene::from_imgt_name_with_allele("IGKV6-d*01")
+            .map(|(g, a)| (g.to_string(), a))
+            .unwrap(),
+        ("IGKV6-d".to_string(), 1)
+    );
 }

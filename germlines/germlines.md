@@ -86,11 +86,22 @@ _Number of genes / number of alleles_
 
 _Number of genes / number of alleles_
 
+## Gorilla gorilla / Western gorilla
+
+| Kind | V | J | C |
+|------|---|---|---|
+|IGHV|0/0|0/0|1/1|
+|IGKV|0/0|0/0|0/0|
+|IGLV|0/0|0/0|0/0|
+|IGIV|0/0|0/0|0/0|
+
+_Number of genes / number of alleles_
+
 ## Gorilla gorilla gorilla / Western lowland gorilla
 
 | Kind | V | J | C |
 |------|---|---|---|
-|IGHV|53/95|5/8|9/14|
+|IGHV|53/95|5/8|11/18|
 |IGKV|26/46|5/6|0/0|
 |IGLV|27/42|6/6|0/0|
 |IGIV|0/0|0/0|0/0|
@@ -101,7 +112,7 @@ _Number of genes / number of alleles_
 
 | Kind | V | J | C |
 |------|---|---|---|
-|IGHV|55/171|6/8|10/41|
+|IGHV|55/171|6/8|11/49|
 |IGKV|40/61|5/5|0/0|
 |IGLV|26/54|4/4|0/0|
 |IGIV|0/0|0/0|0/0|
@@ -156,8 +167,8 @@ _Number of genes / number of alleles_
 
 | Kind | V | J | C |
 |------|---|---|---|
-|IGHV|114/152|4/6|7/10|
-|IGKV|98/111|4/4|0/0|
+|IGHV|114/152|4/6|8/11|
+|IGKV|102/115|4/4|0/0|
 |IGLV|3/5|3/3|0/0|
 |IGIV|0/0|0/0|0/0|
 
@@ -255,7 +266,7 @@ _Number of genes / number of alleles_
 
 | Kind | V | J | C |
 |------|---|---|---|
-|IGHV|53/53|3/3|9/9|
+|IGHV|53/53|3/3|10/10|
 |IGKV|34/34|4/4|0/0|
 |IGLV|28/28|5/5|0/0|
 |IGIV|0/0|0/0|0/0|
@@ -266,7 +277,7 @@ _Number of genes / number of alleles_
 
 | Kind | V | J | C |
 |------|---|---|---|
-|IGHV|97/97|4/4|7/8|
+|IGHV|97/97|4/4|8/10|
 |IGKV|20/20|6/6|0/0|
 |IGLV|7/7|2/2|0/0|
 |IGIV|0/0|0/0|0/0|
@@ -277,7 +288,7 @@ _Number of genes / number of alleles_
 
 | Kind | V | J | C |
 |------|---|---|---|
-|IGHV|67/72|19/19|4/6|
+|IGHV|67/72|19/19|6/9|
 |IGKV|0/0|0/0|0/0|
 |IGLV|0/0|0/0|0/0|
 |IGIV|0/0|0/0|0/0|
@@ -288,7 +299,7 @@ _Number of genes / number of alleles_
 
 | Kind | V | J | C |
 |------|---|---|---|
-|IGHV|6/6|5/5|10/13|
+|IGHV|6/6|5/5|10/14|
 |IGKV|11/19|5/7|0/0|
 |IGLV|10/14|3/4|0/0|
 |IGIV|0/0|0/0|0/0|
@@ -299,7 +310,7 @@ _Number of genes / number of alleles_
 
 | Kind | V | J | C |
 |------|---|---|---|
-|IGHV|4/4|6/6|5/5|
+|IGHV|4/4|6/6|7/7|
 |IGKV|0/0|0/0|0/0|
 |IGLV|0/0|0/0|0/0|
 |IGIV|0/0|0/0|0/0|
