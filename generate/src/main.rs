@@ -468,15 +468,21 @@ impl DataItem {
     }
 
     fn get_sequence(&self, slice: &Location, shift: usize) -> Option<(String, Vec<AminoAcid>)> {
+        let (inner_shift, shift) = if shift == 2 { (1, 0) } else { (0, shift) };
         Some(translate(
             &match slice {
-                Location::Normal(range) => self.sequence.get(range.clone())?.to_string(),
+                Location::Normal(range) => self
+                    .sequence
+                    .get(range.start() - inner_shift..=*range.end())?
+                    .to_string(),
                 Location::SingleNormal(index) => {
                     char::from(*self.sequence.as_bytes().get(*index)?).to_string()
                 }
-                Location::Complement(range) => {
-                    complement(self.sequence.get(range.clone())?.to_string())
-                }
+                Location::Complement(range) => complement(
+                    self.sequence
+                        .get(*range.start()..=*range.end() + inner_shift)?
+                        .to_string(),
+                ),
                 Location::SingleComplement(index) => {
                     complement(char::from(*self.sequence.as_bytes().get(*index)?).to_string())
                 }
@@ -571,8 +577,11 @@ impl IMGTGene {
                         .found_seq
                         .as_ref()
                         .map(|seq| {
-                            let mut final_seq =
-                                region.splice_aa.map(|aa| vec![aa]).unwrap_or_default();
+                            let mut final_seq = region
+                                .splice_aa
+                                .map(|aa| vec![aa])
+                                .filter(|_| region.shift != 2)
+                                .unwrap_or_default();
                             final_seq.extend(seq.1.clone());
                             (final_seq, region.location.clone())
                         })
@@ -602,8 +611,11 @@ impl IMGTGene {
                                     .found_seq
                                     .as_ref()
                                     .map(|seq| {
-                                        let mut final_seq =
-                                            region.splice_aa.map(|aa| vec![aa]).unwrap_or_default();
+                                        let mut final_seq = region
+                                            .splice_aa
+                                            .map(|aa| vec![aa])
+                                            .filter(|_| region.shift != 2)
+                                            .unwrap_or_default();
                                         final_seq.extend(seq.1.clone());
                                         (final_seq, region.location.clone())
                                     })
@@ -624,9 +636,9 @@ impl IMGTGene {
             possibly_add(shared::Region::CH8, "CH8")?;
             possibly_add(shared::Region::CH9, "CH9")?;
             possibly_add(shared::Region::CHS, "CHS")?; // TODO: what if only the combined CHX-CHS is present in the database
-            possibly_add(shared::Region::M, "M")?;
-            possibly_add(shared::Region::M1, "M1")?;
-            possibly_add(shared::Region::M2, "M2")?;
+                                                       // possibly_add(shared::Region::M, "M")?; // TODO: Figure out if support for membrane bound is needed, if so provide a way to switch between the two versions
+                                                       // possibly_add(shared::Region::M1, "M1")?;
+                                                       // possibly_add(shared::Region::M2, "M2")?;
             if seq.is_empty() {
                 return Err("Empty C sequence".to_string());
             }
