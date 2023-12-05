@@ -280,15 +280,19 @@ impl Location {
     }
 
     fn get_aa_loc(&self, inner: &Self) -> Option<RangeInclusive<usize>> {
-        match (self, inner) {
-            (Self::Complement(s), Self::Complement(o)) | (Self::Normal(s), Self::Normal(o)) => {
-                Some((o.start() - s.start()) / 3..=(o.end() - s.start()) / 3)
+        if !self.contains(inner) {
+            None
+        } else {
+            match (self, inner) {
+                (Self::Complement(s), Self::Complement(o)) | (Self::Normal(s), Self::Normal(o)) => {
+                    Some((o.start() - s.start()) / 3..=(o.end() - s.start()) / 3)
+                }
+                (Self::Normal(s), Self::SingleNormal(o))
+                | (Self::Complement(s), Self::SingleComplement(o)) => {
+                    Some((o - s.start()) / 3..=(o - s.start()) / 3)
+                }
+                _ => None,
             }
-            (Self::Normal(s), Self::SingleNormal(o))
-            | (Self::Complement(s), Self::SingleComplement(o)) => {
-                Some((o - s.start()) / 3..=(o - s.start()) / 3)
-            }
-            _ => None,
         }
     }
 }
@@ -439,6 +443,7 @@ impl DataItem {
             "CH9",
             "CHS",
             "H", //"D-REGION",
+            "M",
         ]
         .contains(&region.key.as_str())
         {
@@ -601,6 +606,7 @@ impl IMGTGene {
             possibly_add(shared::Region::CH8, "CH8")?;
             possibly_add(shared::Region::CH9, "CH9")?;
             possibly_add(shared::Region::CHS, "CHS")?; // TODO: what if only the combined CHX-CHS is present in the database
+            possibly_add(shared::Region::M, "M")?;
             if seq.is_empty() {
                 return Err("Empty C sequence".to_string());
             }
