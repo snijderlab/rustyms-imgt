@@ -485,6 +485,8 @@ pub enum Region {
     CH9,
     CHS,
     M,
+    M1,
+    M2,
 }
 
 impl Display for Region {
@@ -512,6 +514,8 @@ impl Display for Region {
                 Self::CH9 => "CH9",
                 Self::CHS => "CHS",
                 Self::M => "M",
+                Self::M1 => "M1",
+                Self::M2 => "M2",
             }
         )
     }

@@ -27,7 +27,7 @@ fn main() {
     for element in data {
         let species = element.as_ref().unwrap().species;
         for gene in element.unwrap().genes {
-            match gene.clone().finish(species.to_owned()) {
+            match gene.clone().finish() {
                 Ok(gene) => grouped
                     .entry(species)
                     .or_insert(Germlines::new(species))
@@ -257,6 +257,7 @@ struct Region {
     functional: bool,
     partial: bool,
     shift: usize,
+    splice_aa: Option<AminoAcid>,
 }
 
 #[derive(Clone, Debug, Hash, Eq, PartialEq)]
@@ -365,6 +366,7 @@ impl DataItem {
                     functional: false,
                     partial: false,
                     shift: 0,
+                    splice_aa: None,
                 });
                 continue;
             }
@@ -387,6 +389,10 @@ impl DataItem {
                         .parse::<usize>()
                         .map_err(|_| format!("Not a valid codon_start: '{tail}'"))?
                         - 1;
+                } else if let Some(tail) = trimmed.strip_prefix("/splice-expectedcodon=") {
+                    if let Some(i) = tail.find(']') {
+                        current.splice_aa = AminoAcid::try_from(tail.as_bytes()[i - 1]).ok();
+                    }
                 } else if trimmed.starts_with("/functional") {
                     current.functional = true;
                 } else if trimmed.starts_with("/partial") {
@@ -444,6 +450,8 @@ impl DataItem {
             "CHS",
             "H", //"D-REGION",
             "M",
+            "M1",
+            "M2",
         ]
         .contains(&region.key.as_str())
         {
@@ -498,7 +506,7 @@ fn translate(s: &str) -> (&str, Vec<AminoAcid>) {
         (s, Vec::new())
     } else {
         (
-            s.clone(),
+            s,
             (0..=s.len() - 3)
                 .step_by(3)
                 .filter_map(|chunk| {
@@ -553,7 +561,7 @@ impl Display for Region {
 }
 
 impl IMGTGene {
-    fn finish(self, species: Species) -> Result<Germline, String> {
+    fn finish(self) -> Result<Germline, String> {
         let get = |key| -> Result<(Vec<AminoAcid>, Location), String> {
             self.regions
                 .get(key)
@@ -562,7 +570,12 @@ impl IMGTGene {
                     region
                         .found_seq
                         .as_ref()
-                        .map(|seq| (seq.1.clone(), region.location.clone()))
+                        .map(|seq| {
+                            let mut final_seq =
+                                region.splice_aa.map(|aa| vec![aa]).unwrap_or_default();
+                            final_seq.extend(seq.1.clone());
+                            (final_seq, region.location.clone())
+                        })
                         .ok_or(format!("{key} does not have a sequence"))
                 })
         };
@@ -588,7 +601,12 @@ impl IMGTGene {
                                 region
                                     .found_seq
                                     .as_ref()
-                                    .map(|seq| (seq.1.clone(), region.location.clone()))
+                                    .map(|seq| {
+                                        let mut final_seq =
+                                            region.splice_aa.map(|aa| vec![aa]).unwrap_or_default();
+                                        final_seq.extend(seq.1.clone());
+                                        (final_seq, region.location.clone())
+                                    })
                                     .ok_or(format!("{key} does not have a sequence"))
                             })?,
                     ))
@@ -607,6 +625,8 @@ impl IMGTGene {
             possibly_add(shared::Region::CH9, "CH9")?;
             possibly_add(shared::Region::CHS, "CHS")?; // TODO: what if only the combined CHX-CHS is present in the database
             possibly_add(shared::Region::M, "M")?;
+            possibly_add(shared::Region::M1, "M1")?;
+            possibly_add(shared::Region::M2, "M2")?;
             if seq.is_empty() {
                 return Err("Empty C sequence".to_string());
             }
