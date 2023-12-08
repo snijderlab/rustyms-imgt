@@ -1,6 +1,6 @@
+#![allow(dead_code)]
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
-#[allow(dead_code)]
 
 macro_rules! species {
     ($($identifier:ident, $common:expr, $imgt:expr, $scientific:expr)*) => {
