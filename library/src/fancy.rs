@@ -15,7 +15,7 @@ impl FancyDisplay for Gene {
 
         write!(
             f,
-            "IG{}{}{}{}",
+            "Ig{}{}{}{}",
             self.chain.to_fancy_string(),
             self.gene.to_fancy_string(),
             if let Some(n) = &self.number {
@@ -54,10 +54,10 @@ impl FancyDisplay for Gene {
 impl FancyDisplay for ChainType {
     fn to_fancy_string(&self) -> String {
         match self {
-            Self::Heavy => "H",
-            Self::LightKappa => "Κ",
-            Self::LightLambda => "Λ",
-            Self::Iota => "Ι",
+            Self::Heavy => "",
+            Self::LightKappa => "κ",
+            Self::LightLambda => "λ",
+            Self::Iota => "ι",
         }
         .to_string()
     }
@@ -69,13 +69,13 @@ impl FancyDisplay for GeneType {
             Self::V => "V",
             Self::J => "J",
             Self::C(None) => "C",
-            Self::C(Some(Constant::A)) => "Α",
-            Self::C(Some(Constant::D)) => "Δ",
-            Self::C(Some(Constant::E)) => "Ε",
-            Self::C(Some(Constant::G)) => "Ɣ",
-            Self::C(Some(Constant::M)) => "Μ",
-            Self::C(Some(Constant::O)) => "Ο",
-            Self::C(Some(Constant::T)) => "Τ",
+            Self::C(Some(Constant::A)) => "α",
+            Self::C(Some(Constant::D)) => "δ",
+            Self::C(Some(Constant::E)) => "ε",
+            Self::C(Some(Constant::G)) => "ɣ",
+            Self::C(Some(Constant::M)) => "μ",
+            Self::C(Some(Constant::O)) => "ο",
+            Self::C(Some(Constant::T)) => "τ",
         }
         .to_string()
     }

@@ -371,9 +371,9 @@ impl FromStr for ChainType {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "H" => Ok(Self::Heavy),
-            "Κ" | "K" => Ok(Self::LightKappa),
-            "Λ" | "L" => Ok(Self::LightLambda),
-            "Ι" | "I" => Ok(Self::Iota),
+            "κ" | "K" => Ok(Self::LightKappa),
+            "λ" | "L" => Ok(Self::LightLambda),
+            "ι" | "I" => Ok(Self::Iota),
             _ => Err(()),
         }
     }
@@ -426,13 +426,13 @@ impl FromStr for GeneType {
             "V" => Ok(Self::V),
             "J" => Ok(Self::J),
             "C" => Ok(Self::C(None)),
-            "Α" | "A" => Ok(Self::C(Some(Constant::A))),
-            "Δ" | "D" => Ok(Self::C(Some(Constant::D))),
-            "Ε" | "E" => Ok(Self::C(Some(Constant::E))),
-            "Ɣ" | "G" => Ok(Self::C(Some(Constant::G))),
-            "Μ" | "M" => Ok(Self::C(Some(Constant::M))),
-            "Ο" | "O" => Ok(Self::C(Some(Constant::O))),
-            "Τ" | "T" => Ok(Self::C(Some(Constant::T))),
+            "α" | "A" => Ok(Self::C(Some(Constant::A))),
+            "δ" | "D" => Ok(Self::C(Some(Constant::D))),
+            "ε" | "E" => Ok(Self::C(Some(Constant::E))),
+            "ɣ" | "G" => Ok(Self::C(Some(Constant::G))),
+            "μ" | "M" => Ok(Self::C(Some(Constant::M))),
+            "ο" | "O" => Ok(Self::C(Some(Constant::O))),
+            "τ" | "T" => Ok(Self::C(Some(Constant::T))),
             // "DD" => Ok(Self::C(Some(Constant::DD))),
             // "MD" => Ok(Self::C(Some(Constant::MD))),
             _ => Err(()),

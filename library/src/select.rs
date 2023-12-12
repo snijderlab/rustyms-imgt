@@ -178,7 +178,7 @@ impl<'a> Allele<'a> {
         format!("{}*{:02}", self.gene, self.allele)
     }
 
-    /// Get the IMGT name for this allele with fancy non UTF-8 characters
+    /// Get the biologists name for this allele with fancy non UTF-8 characters
     pub fn fancy_name(&self) -> String {
         format!("{}*{:02}", self.gene.to_fancy_string(), self.allele)
     }
