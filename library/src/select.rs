@@ -4,6 +4,7 @@ use std::collections::HashSet;
 
 use rustyms::LinearPeptide;
 
+pub use crate::fancy::FancyDisplay;
 pub use crate::shared::*;
 
 /// Get a specific germline
@@ -175,6 +176,11 @@ impl<'a> Allele<'a> {
     /// Get the IMGT name for this allele
     pub fn name(&self) -> String {
         format!("{}*{:02}", self.gene, self.allele)
+    }
+
+    /// Get the IMGT name for this allele with fancy non UTF-8 characters
+    pub fn fancy_name(&self) -> String {
+        format!("{}*{:02}", self.gene.to_fancy_string(), self.allele)
     }
 
     /// Get the region for a specific index into the sequence, None if outside range,
