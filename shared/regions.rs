@@ -26,25 +26,25 @@ impl Germlines {
     }
 
     pub(crate) fn insert(&mut self, germline: Germline) {
-        match &germline.name.kind {
-            Kind::Heavy => self.h.insert(germline),
-            Kind::LightKappa => self.k.insert(germline),
-            Kind::LightLambda => self.l.insert(germline),
-            Kind::I => self.i.insert(germline),
+        match &germline.name.chain {
+            ChainType::Heavy => self.h.insert(germline),
+            ChainType::LightKappa => self.k.insert(germline),
+            ChainType::LightLambda => self.l.insert(germline),
+            ChainType::Iota => self.i.insert(germline),
         };
     }
 }
 
 impl<'a> IntoIterator for &'a Germlines {
-    type IntoIter = std::array::IntoIter<(Kind, &'a Chain), 4>;
-    type Item = (Kind, &'a Chain);
+    type IntoIter = std::array::IntoIter<(ChainType, &'a Chain), 4>;
+    type Item = (ChainType, &'a Chain);
 
     fn into_iter(self) -> Self::IntoIter {
         [
-            (Kind::Heavy, &self.h),
-            (Kind::LightKappa, &self.k),
-            (Kind::LightLambda, &self.l),
-            (Kind::I, &self.i),
+            (ChainType::Heavy, &self.h),
+            (ChainType::LightKappa, &self.k),
+            (ChainType::LightLambda, &self.l),
+            (ChainType::Iota, &self.i),
         ]
         .into_iter()
     }
@@ -54,15 +54,15 @@ impl<'a> IntoIterator for &'a Germlines {
 use rayon::prelude::*;
 #[cfg(feature = "rayon")]
 impl<'a> IntoParallelIterator for &'a Germlines {
-    type Iter = rayon::array::IntoIter<(Kind, &'a Chain), 4>;
-    type Item = (Kind, &'a Chain);
+    type Iter = rayon::array::IntoIter<(ChainType, &'a Chain), 4>;
+    type Item = (ChainType, &'a Chain);
 
     fn into_par_iter(self) -> Self::Iter {
         [
-            (Kind::Heavy, &self.h),
-            (Kind::LightKappa, &self.k),
-            (Kind::LightLambda, &self.l),
-            (Kind::I, &self.i),
+            (ChainType::Heavy, &self.h),
+            (ChainType::LightKappa, &self.k),
+            (ChainType::LightLambda, &self.l),
+            (ChainType::Iota, &self.i),
         ]
         .into_par_iter()
     }
@@ -77,10 +77,10 @@ pub(crate) struct Chain {
 
 impl Chain {
     pub(crate) fn insert(&mut self, mut germline: Germline) {
-        let db = match &germline.name.segment {
-            Segment::V => &mut self.variable,
-            Segment::J => &mut self.joining,
-            Segment::C(_) => &mut self.constant,
+        let db = match &germline.name.gene {
+            GeneType::V => &mut self.variable,
+            GeneType::J => &mut self.joining,
+            GeneType::C(_) => &mut self.constant,
         };
 
         match db.binary_search_by_key(&germline.name, |g| g.name.clone()) {
@@ -122,14 +122,14 @@ impl Chain {
 }
 
 impl<'a> IntoIterator for &'a Chain {
-    type IntoIter = std::array::IntoIter<(Segment, &'a [Germline]), 3>;
-    type Item = (Segment, &'a [Germline]);
+    type IntoIter = std::array::IntoIter<(GeneType, &'a [Germline]), 3>;
+    type Item = (GeneType, &'a [Germline]);
 
     fn into_iter(self) -> Self::IntoIter {
         [
-            (Segment::V, self.variable.as_slice()),
-            (Segment::J, self.joining.as_slice()),
-            (Segment::C(None), self.constant.as_slice()),
+            (GeneType::V, self.variable.as_slice()),
+            (GeneType::J, self.joining.as_slice()),
+            (GeneType::C(None), self.constant.as_slice()),
         ]
         .into_iter()
     }
@@ -137,14 +137,14 @@ impl<'a> IntoIterator for &'a Chain {
 
 #[cfg(feature = "rayon")]
 impl<'a> IntoParallelIterator for &'a Chain {
-    type Iter = rayon::array::IntoIter<(Segment, &'a [Germline]), 3>;
-    type Item = (Segment, &'a [Germline]);
+    type Iter = rayon::array::IntoIter<(GeneType, &'a [Germline]), 3>;
+    type Item = (GeneType, &'a [Germline]);
 
     fn into_par_iter(self) -> Self::Iter {
         [
-            (Segment::V, self.variable.as_slice()),
-            (Segment::J, self.joining.as_slice()),
-            (Segment::C(None), self.constant.as_slice()),
+            (GeneType::V, self.variable.as_slice()),
+            (GeneType::J, self.joining.as_slice()),
+            (GeneType::C(None), self.constant.as_slice()),
         ]
         .into_par_iter()
     }
@@ -187,8 +187,8 @@ pub(crate) struct AnnotatedSequence {
 /// A germline gene name, broken up in its constituent parts.
 #[derive(Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord, Clone, Debug)]
 pub struct Gene {
-    pub kind: Kind,
-    pub segment: Segment,
+    pub chain: ChainType,
+    pub gene: GeneType,
     pub number: Option<usize>,
     pub family: Vec<(Option<usize>, String)>,
 }
@@ -204,8 +204,8 @@ impl Display for Gene {
         write!(
             f,
             "IG{}{}{}{}",
-            self.kind,
-            self.segment,
+            self.chain,
+            self.gene,
             if let Some(n) = &self.number {
                 format!("({})", to_roman(*n))
             } else {
@@ -284,31 +284,31 @@ impl Gene {
 
         fn from_roman(s: &str) -> Option<usize> {
             match s {
-                "I" => Some(1),
-                "II" => Some(2),
-                "III" => Some(3),
-                "IV" => Some(4),
-                "V" => Some(5),
-                "VI" => Some(6),
-                "VII" => Some(7),
-                "VIII" => Some(8),
-                "IX" => Some(9),
-                "X" => Some(10),
+                "Ⅰ" | "I" => Some(1),
+                "Ⅱ" | "II" => Some(2),
+                "Ⅲ" | "III" => Some(3),
+                "Ⅳ" | "IV" => Some(4),
+                "Ⅴ" | "V" => Some(5),
+                "Ⅵ" | "VI" => Some(6),
+                "Ⅶ" | "VII" => Some(7),
+                "Ⅷ" | "VIII" => Some(8),
+                "Ⅸ" | "IX" => Some(9),
+                "Ⅹ" | "X" => Some(10),
                 _ => None,
             }
         }
 
         if s.starts_with("IG") {
-            let kind = s[2..3]
+            let chain = s[2..3]
                 .parse()
-                .map_err(|()| format!("Invalid kind: `{}`", &s[2..3]))?;
-            let segment = s[3..4]
+                .map_err(|()| format!("Invalid chain: `{}`", &s[2..3]))?;
+            let gene = s[3..4]
                 .parse()
-                .map_err(|()| format!("Invalid segment: `{}`", &s[3..4]))?;
+                .map_err(|()| format!("Invalid gene: `{}`", &s[3..4]))?;
             let mut start = 4;
             let number = if &s[4..5] == "(" {
                 let end = s[5..].find(')').ok_or(format!(
-                    "Invalid segment number `{}` out of `{}`",
+                    "Invalid gene number `{}` out of `{}`",
                     &s[4..],
                     s
                 ))?;
@@ -330,8 +330,8 @@ impl Gene {
 
             Ok((
                 Self {
-                    kind,
-                    segment,
+                    chain,
+                    gene,
                     number,
                     family,
                 },
@@ -343,43 +343,43 @@ impl Gene {
     }
 }
 
-/// Any kind of germline
+/// Any chain type of germline
 #[derive(Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Hash, Debug)]
-pub enum Kind {
+pub enum ChainType {
     Heavy = 0,
     LightKappa,
     LightLambda,
     /// Fish I kind
-    I,
+    Iota,
 }
 
-impl TryFrom<usize> for Kind {
+impl TryFrom<usize> for ChainType {
     type Error = ();
     fn try_from(i: usize) -> Result<Self, Self::Error> {
         match i {
             0 => Ok(Self::Heavy),
             1 => Ok(Self::LightKappa),
             2 => Ok(Self::LightLambda),
-            3 => Ok(Self::I),
+            3 => Ok(Self::Iota),
             _ => Err(()),
         }
     }
 }
 
-impl FromStr for Kind {
+impl FromStr for ChainType {
     type Err = ();
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
-            "K" => Ok(Self::LightKappa),
-            "L" => Ok(Self::LightLambda),
             "H" => Ok(Self::Heavy),
-            "I" => Ok(Self::I),
+            "Κ" | "K" => Ok(Self::LightKappa),
+            "Λ" | "L" => Ok(Self::LightLambda),
+            "Ι" | "I" => Ok(Self::Iota),
             _ => Err(()),
         }
     }
 }
 
-impl Display for Kind {
+impl Display for ChainType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
@@ -388,15 +388,15 @@ impl Display for Kind {
                 Self::Heavy => "H",
                 Self::LightKappa => "K",
                 Self::LightLambda => "L",
-                Self::I => "I",
+                Self::Iota => "I",
             }
         )
     }
 }
 
-/// Any segment in a germline, eg variable, joining
+/// Any gene in a germline, eg variable, joining
 #[derive(Debug, PartialEq, Eq, Serialize, Deserialize, PartialOrd, Ord, Clone, Hash, Copy)]
-pub enum Segment {
+pub enum GeneType {
     /// Variable
     V,
     /// Joining
@@ -405,7 +405,7 @@ pub enum Segment {
     C(Option<Constant>),
 }
 
-/// Any type of constant segment
+/// Any type of constant gene
 #[derive(Debug, PartialEq, Eq, Serialize, Deserialize, PartialOrd, Ord, Clone, Copy, Hash)]
 pub enum Constant {
     A,
@@ -419,28 +419,28 @@ pub enum Constant {
     T,
 }
 
-impl FromStr for Segment {
+impl FromStr for GeneType {
     type Err = ();
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "V" => Ok(Self::V),
             "J" => Ok(Self::J),
             "C" => Ok(Self::C(None)),
-            "A" => Ok(Self::C(Some(Constant::A))),
+            "Α" | "A" => Ok(Self::C(Some(Constant::A))),
+            "Δ" | "D" => Ok(Self::C(Some(Constant::D))),
+            "Ε" | "E" => Ok(Self::C(Some(Constant::E))),
+            "Ɣ" | "G" => Ok(Self::C(Some(Constant::G))),
+            "Μ" | "M" => Ok(Self::C(Some(Constant::M))),
+            "Ο" | "O" => Ok(Self::C(Some(Constant::O))),
+            "Τ" | "T" => Ok(Self::C(Some(Constant::T))),
             // "DD" => Ok(Self::C(Some(Constant::DD))),
             // "MD" => Ok(Self::C(Some(Constant::MD))),
-            "D" => Ok(Self::C(Some(Constant::D))),
-            "E" => Ok(Self::C(Some(Constant::E))),
-            "G" => Ok(Self::C(Some(Constant::G))),
-            "M" => Ok(Self::C(Some(Constant::M))),
-            "O" => Ok(Self::C(Some(Constant::O))),
-            "T" => Ok(Self::C(Some(Constant::T))),
             _ => Err(()),
         }
     }
 }
 
-impl Display for Segment {
+impl Display for GeneType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,

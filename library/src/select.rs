@@ -20,10 +20,10 @@ pub fn get_germline(
 pub struct Selection {
     /// The species you want, None allows all, otherwise only the species specified will be returned
     pub species: Option<HashSet<Species>>,
-    /// The kind of alleles you want, None allows all, otherwise only the kinds specified will be returned
-    pub kinds: Option<HashSet<Kind>>,
-    /// The kind of segments you want, None allows all, otherwise only the segments specified will be returned
-    pub segments: Option<HashSet<Segment>>,
+    /// The chain of genes you want, None allows all, otherwise only the chains specified will be returned
+    pub chains: Option<HashSet<ChainType>>,
+    /// The kind of genes you want, None allows all, otherwise only the genes specified will be returned
+    pub genes: Option<HashSet<GeneType>>,
     /// The way of handling alleles you want
     pub allele: AlleleSelection,
 }
@@ -36,17 +36,17 @@ impl Selection {
             ..self
         }
     }
-    /// Builder pattern method to add a kind selection, will replace any previously set selection
-    pub fn kind(self, kinds: impl Into<HashSet<Kind>>) -> Self {
+    /// Builder pattern method to add a chain selection, will replace any previously set selection
+    pub fn chain(self, chains: impl Into<HashSet<ChainType>>) -> Self {
         Self {
-            kinds: Some(kinds.into()),
+            chains: Some(chains.into()),
             ..self
         }
     }
-    /// Builder pattern method to add a segment selection, will replace any previously set selection
-    pub fn segment(self, segments: impl Into<HashSet<Segment>>) -> Self {
+    /// Builder pattern method to add a gene selection, will replace any previously set selection
+    pub fn gene(self, genes: impl Into<HashSet<GeneType>>) -> Self {
         Self {
-            segments: Some(segments.into()),
+            genes: Some(genes.into()),
             ..self
         }
     }
@@ -65,16 +65,16 @@ impl Selection {
             })
             .flat_map(|g| g.into_iter().map(|c| (g.species, c.0, c.1)))
             .filter(|(_, kind, _)| {
-                self.kinds
+                self.chains
                     .as_ref()
                     .map(|k| k.contains(kind))
                     .unwrap_or(true)
             })
             .flat_map(|(species, _, c)| c.into_iter().map(move |g| (species, g.0, g.1)))
-            .filter(|(_, segment, _)| {
-                self.segments
+            .filter(|(_, gene, _)| {
+                self.genes
                     .as_ref()
-                    .map(|s| s.contains(segment))
+                    .map(|s| s.contains(gene))
                     .unwrap_or(true)
             })
             .flat_map(|(species, _, germlines)| germlines.iter().map(move |a| (species, a)))
@@ -98,16 +98,16 @@ impl Selection {
             })
             .flat_map(|g| g.into_par_iter().map(|c| (g.species, c.0, c.1)))
             .filter(|(_, kind, _)| {
-                self.kinds
+                self.chains
                     .as_ref()
                     .map(|k| k.contains(kind))
                     .unwrap_or(true)
             })
             .flat_map(|(species, _, c)| c.into_par_iter().map(move |g| (species, g.0, g.1)))
-            .filter(|(_, segment, _)| {
-                self.segments
+            .filter(|(_, gene, _)| {
+                self.genes
                     .as_ref()
-                    .map(|s| s.contains(segment))
+                    .map(|s| s.contains(gene))
                     .unwrap_or(true)
             })
             .flat_map(|(species, _, germlines)| {
@@ -124,12 +124,12 @@ impl Selection {
 }
 
 impl Default for Selection {
-    /// Get a default selection, which gives all kinds and segments but only returns the first allele
+    /// Get a default selection, which gives all kinds and genes but only returns the first allele
     fn default() -> Self {
         Self {
             species: None,
-            kinds: None,
-            segments: None,
+            chains: None,
+            genes: None,
             allele: AlleleSelection::First,
         }
     }
@@ -218,16 +218,16 @@ impl<'a> From<(Species, &'a Gene, usize, &'a AnnotatedSequence)> for Allele<'a> 
 
 impl Germlines {
     pub fn find(&self, species: Species, gene: Gene, allele: Option<usize>) -> Option<Allele<'_>> {
-        let chain = match gene.kind {
-            Kind::Heavy => &self.h,
-            Kind::LightKappa => &self.k,
-            Kind::LightLambda => &self.l,
-            Kind::I => &self.i,
+        let chain = match gene.chain {
+            ChainType::Heavy => &self.h,
+            ChainType::LightKappa => &self.k,
+            ChainType::LightLambda => &self.l,
+            ChainType::Iota => &self.i,
         };
-        let genes = match gene.segment {
-            Segment::V => &chain.variable,
-            Segment::J => &chain.joining,
-            Segment::C(_) => &chain.constant,
+        let genes = match gene.gene {
+            GeneType::V => &chain.variable,
+            GeneType::J => &chain.joining,
+            GeneType::C(_) => &chain.constant,
         };
         genes
             .binary_search_by(|g| g.name.cmp(&gene))
@@ -252,14 +252,14 @@ impl Germlines {
 #[cfg(test)]
 mod tests {
     use crate::Selection;
-    use crate::{Kind, Segment, Species};
+    use crate::{ChainType, GeneType, Species};
 
     #[test]
     fn try_first_human() {
         let selection = Selection::default()
             .species([Species::HomoSapiens])
-            .kind([Kind::Heavy])
-            .segment([Segment::V]);
+            .chain([ChainType::Heavy])
+            .gene([GeneType::V]);
         let first = selection.germlines().next().unwrap();
         assert_eq!(first.name(), "IGHV1-2*01");
     }
