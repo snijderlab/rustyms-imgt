@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 use rustyms::LinearPeptide;
 use serde::{Deserialize, Serialize};
 use std::{fmt::Display, str::FromStr};

@@ -1,4 +1,4 @@
-#![allow(dead_code)]
+#![allow(dead_code, unreachable_patterns)]
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 
