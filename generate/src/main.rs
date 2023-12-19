@@ -12,16 +12,16 @@ use std::{
 mod shared;
 
 use crate::shared::*;
-use flate2::read::GzDecoder;
 use itertools::Itertools;
 use rustyms::AminoAcid;
 
 fn main() {
-    let file = File::open("../data/imgt.dat.Z").unwrap();
+    let file = File::open("../data/imgt.dat")
+        .expect("Please provide the 'imgt.dat' file in the 'data' directory.");
     let mut output = BufWriter::new(File::create("../germlines/germlines.rs").unwrap());
     let mut docs = BufWriter::new(File::create("../germlines/germlines.md").unwrap());
     let mut error = BufWriter::new(File::create("errors.dat").unwrap());
-    let data = parse_dat(BufReader::new(GzDecoder::new(file)));
+    let data = parse_dat(BufReader::new(file));
     let mut grouped = HashMap::new();
     let mut errors = Vec::new();
     for element in data {
