@@ -4,7 +4,7 @@ Two projects:
 * generate 
 * library
 
-Generate generates the binary germlines and rust code needed to interface with them. The library can then be pushed to crates.io while not overflowing the storage limit. If you want to generate newer germlines from an update database you need to put the `imgt.dat.Z` file in the `data` directory (this can be downloaded from `https://www.imgt.org/download/LIGM-DB/imgt.dat.Z`).
+Generate generates the binary germlines and rust code needed to interface with them. The library can then be pushed to crates.io while not overflowing the storage limit. If you want to generate newer germlines from an update database you need to put the `imgt.dat.Z` file in the `data` directory and unpack it (this can be downloaded from `https://www.imgt.org/download/LIGM-DB/imgt.dat.Z`).
 
 Folders:
 * data - put the IMGT data here
@@ -13,4 +13,4 @@ Folders:
 * library - the library which ends up on crates.io
 * shared - shared code between the library and generate binary
 
-Run `cargo run --release` from inside the generate folder to update the binary germline files based on the `imgt.dat.Z` in the `data` folder.
+Run `cargo run --release` from inside the generate folder to update the binary germline files based on the `imgt.dat` in the `data` folder.

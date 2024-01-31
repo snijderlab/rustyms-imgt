@@ -10,7 +10,7 @@ rust-version = "1.70.0"
 
 [dependencies]
 bincode = "1.3"
-itertools = "*"
+itertools = "0.12"
 rayon = { version = "1.8", optional = true }
 rustyms = { git = "https://github.com/snijderlab/rustyms" }
 serde = { version = "1.0", features = ["derive"] }

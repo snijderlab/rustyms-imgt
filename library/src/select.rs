@@ -56,23 +56,23 @@ impl Selection {
         Self { allele, ..self }
     }
     /// Get the selected alleles
-    pub fn germlines(&self) -> impl Iterator<Item = Allele<'_>> {
+    pub fn germlines(self) -> impl Iterator<Item = Allele<'static>> {
         crate::all_germlines()
-            .filter(|g| {
+            .filter(move |g| {
                 self.species
                     .as_ref()
                     .map(|s| s.contains(&g.species))
                     .unwrap_or(true)
             })
             .flat_map(|g| g.into_iter().map(|c| (g.species, c.0, c.1)))
-            .filter(|(_, kind, _)| {
+            .filter(move |(_, kind, _)| {
                 self.chains
                     .as_ref()
                     .map(|k| k.contains(kind))
                     .unwrap_or(true)
             })
             .flat_map(|(species, _, c)| c.into_iter().map(move |g| (species, g.0, g.1)))
-            .filter(|(_, gene, _)| {
+            .filter(move |(_, gene, _)| {
                 self.genes
                     .as_ref()
                     .map(|s| s.contains(gene))
@@ -89,23 +89,23 @@ impl Selection {
     }
     #[cfg(feature = "rayon")]
     /// Get the selected alleles in parallel fashion, only available if you enable the feature "rayon" (on by default)
-    pub fn par_germlines(&self) -> impl ParallelIterator<Item = Allele<'_>> {
+    pub fn par_germlines(self) -> impl ParallelIterator<Item = Allele<'static>> {
         crate::par_germlines()
-            .filter(|g| {
+            .filter(move |g| {
                 self.species
                     .as_ref()
                     .map(|s| s.contains(&g.species))
                     .unwrap_or(true)
             })
             .flat_map(|g| g.into_par_iter().map(|c| (g.species, c.0, c.1)))
-            .filter(|(_, kind, _)| {
+            .filter(move |(_, kind, _)| {
                 self.chains
                     .as_ref()
                     .map(|k| k.contains(kind))
                     .unwrap_or(true)
             })
             .flat_map(|(species, _, c)| c.into_par_iter().map(move |g| (species, g.0, g.1)))
-            .filter(|(_, gene, _)| {
+            .filter(move |(_, gene, _)| {
                 self.genes
                     .as_ref()
                     .map(|s| s.contains(gene))
