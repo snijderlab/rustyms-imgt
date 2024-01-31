@@ -29,21 +29,20 @@ pub fn consecutive_align<const STEPS: usize>(
     allele: AlleleSelection,
     tolerance: Tolerance,
     matrix: &[[i8; AminoAcid::TOTAL_NUMBER]; AminoAcid::TOTAL_NUMBER],
-) -> Vec<(Allele<'static>, Alignment)> {
+    return_number: usize,
+) -> Vec<(Alignment, Vec<Allele<'static>>)> {
     assert!(genes.len() >= 2);
     const GLOBAL_A_LEFT: Type = Type::new(true, true, true, false);
-    let mut output: Vec<(Allele, Alignment)> = Vec::with_capacity(genes.len());
+    let mut output: Vec<(Alignment, Vec<Allele<'static>>)> = Vec::with_capacity(genes.len());
 
+    let mut prev = 0;
     for n in 1..genes.len() {
         let left_sequence = if n == 0 {
             sequence.clone()
         } else {
-            let mut left_sequence: LinearPeptide = sequence
-                .clone()
-                .sequence
-                .into_iter()
-                .skip(output[n - 1].1.start_b + output[n - 1].1.len_b())
-                .collect();
+            prev += output[n - 1].0.start_b + output[n - 1].0.len_b();
+            let mut left_sequence: LinearPeptide =
+                sequence.clone().sequence.into_iter().skip(prev).collect();
             left_sequence.c_term = sequence.c_term.clone();
             left_sequence
         };
@@ -52,7 +51,7 @@ pub fn consecutive_align<const STEPS: usize>(
             break;
         }
 
-        output[n] = Selection {
+        let alignments = Selection {
             species: species.clone(),
             chains: chains.clone(),
             allele: allele.clone(),
@@ -76,13 +75,13 @@ pub fn consecutive_align<const STEPS: usize>(
                 ),
             )
         })
-        .max_by(|a, b| b.1.normalised_score.total_cmp(&a.1.normalised_score))
-        .unwrap_or_else(|| {
-            panic!(
-                "Germline sequences should be available for gene {} in consecutive alignment",
-                genes[n].0
-            )
-        });
+        .sorted_by(|a, b| b.1.normalised_score.total_cmp(&a.1.normalised_score))
+        .take(return_number)
+        .collect_vec();
+        output[n] = (
+            alignments[0].1.clone(),
+            alignments.into_iter().map(|(a, _)| a).collect(),
+        );
     }
     output
 }
@@ -98,23 +97,22 @@ pub fn par_consecutive_align<const STEPS: usize>(
     allele: AlleleSelection,
     tolerance: Tolerance,
     matrix: &[[i8; AminoAcid::TOTAL_NUMBER]; AminoAcid::TOTAL_NUMBER],
-) -> Vec<(Allele<'static>, Alignment)> {
+    return_number: usize,
+) -> Vec<(Alignment, Vec<Allele<'static>>)> {
     use rayon::iter::ParallelIterator;
 
     assert!(genes.len() >= 2);
     const GLOBAL_A_LEFT: Type = Type::new(true, true, true, false);
-    let mut output: Vec<(Allele, Alignment)> = Vec::with_capacity(genes.len());
+    let mut output: Vec<(Alignment, Vec<Allele<'static>>)> = Vec::with_capacity(genes.len());
 
+    let mut prev = 0;
     for n in 1..genes.len() {
         let left_sequence = if n == 0 {
             sequence.clone()
         } else {
-            let mut left_sequence: LinearPeptide = sequence
-                .clone()
-                .sequence
-                .into_iter()
-                .skip(output[n - 1].1.start_b + output[n - 1].1.len_b())
-                .collect();
+            prev += output[n - 1].0.start_b + output[n - 1].0.len_b();
+            let mut left_sequence: LinearPeptide =
+                sequence.clone().sequence.into_iter().skip(prev).collect();
             left_sequence.c_term = sequence.c_term.clone();
             left_sequence
         };
@@ -123,7 +121,7 @@ pub fn par_consecutive_align<const STEPS: usize>(
             break;
         }
 
-        output[n] = Selection {
+        let alignments = Selection {
             species: species.clone(),
             chains: chains.clone(),
             allele: allele.clone(),
@@ -147,13 +145,13 @@ pub fn par_consecutive_align<const STEPS: usize>(
                 ),
             )
         })
-        .max_by(|a, b| b.1.normalised_score.total_cmp(&a.1.normalised_score))
-        .unwrap_or_else(|| {
-            panic!(
-                "Germline sequences should be available for gene {} in consecutive alignment",
-                genes[n].0
-            )
-        });
+        .sorted_by(|a, b| b.1.normalised_score.total_cmp(&a.1.normalised_score))
+        .take(return_number)
+        .collect_vec();
+        output[n] = (
+            alignments[0].1.clone(),
+            alignments.into_iter().map(|(a, _)| a).collect(),
+        );
     }
     output
 }
