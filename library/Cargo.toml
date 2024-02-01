@@ -14,6 +14,7 @@ itertools = "0.12"
 rayon = { version = "1.8", optional = true }
 rustyms = { git = "https://github.com/snijderlab/rustyms" }
 serde = { version = "1.0", features = ["derive"] }
+ordered-float = { version = "4.2", features = ["serde"] }
 
 [features]
 default = ["rayon"]

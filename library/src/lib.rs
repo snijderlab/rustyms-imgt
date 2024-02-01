@@ -3,10 +3,13 @@
 mod fancy;
 #[path = "../../germlines/germlines.rs"]
 mod germlines;
+mod itertools_extension;
 mod select;
 #[path = "../../shared/mod.rs"]
 mod shared;
 
+use itertools_extension::*;
+use ordered_float::OrderedFloat;
 use std::collections::HashSet;
 
 pub use fancy::*;
@@ -23,24 +26,23 @@ pub use shared::*;
 /// If the sequence is too short to cover all genes only the genes that could be matched are returned.
 pub fn consecutive_align<const STEPS: usize>(
     sequence: LinearPeptide,
-    genes: &[(GeneType, bool)],
+    genes: &[(GeneType, Type)],
     species: Option<HashSet<Species>>,
     chains: Option<HashSet<ChainType>>,
     allele: AlleleSelection,
     tolerance: Tolerance,
     matrix: &[[i8; AminoAcid::TOTAL_NUMBER]; AminoAcid::TOTAL_NUMBER],
     return_number: usize,
-) -> Vec<(Alignment, Vec<Allele<'static>>)> {
+) -> Vec<Vec<(Allele<'static>, Alignment)>> {
     assert!(genes.len() >= 2);
-    const GLOBAL_A_LEFT: Type = Type::new(true, true, true, false);
-    let mut output: Vec<(Alignment, Vec<Allele<'static>>)> = Vec::with_capacity(genes.len());
+    let mut output: Vec<Vec<(Allele<'static>, Alignment)>> = Vec::with_capacity(genes.len());
 
     let mut prev = 0;
     for n in 1..genes.len() {
         let left_sequence = if n == 0 {
             sequence.clone()
         } else {
-            prev += output[n - 1].0.start_b + output[n - 1].0.len_b();
+            prev += output[n - 1][0].1.start_b + output[n - 1][0].1.len_b();
             let mut left_sequence: LinearPeptide =
                 sequence.clone().sequence.into_iter().skip(prev).collect();
             left_sequence.c_term = sequence.c_term.clone();
@@ -51,7 +53,7 @@ pub fn consecutive_align<const STEPS: usize>(
             break;
         }
 
-        let alignments = Selection {
+        output[n] = Selection {
             species: species.clone(),
             chains: chains.clone(),
             allele: allele.clone(),
@@ -67,21 +69,12 @@ pub fn consecutive_align<const STEPS: usize>(
                     left_sequence.clone(),
                     matrix,
                     tolerance,
-                    if genes[n].1 {
-                        GLOBAL_A_LEFT
-                    } else {
-                        Type::GLOBAL_A
-                    },
+                    genes[n].1,
                 ),
             )
         })
-        .sorted_by(|a, b| b.1.normalised_score.total_cmp(&a.1.normalised_score))
-        .take(return_number)
+        .k_largest_by_key(return_number, |i| OrderedFloat(i.1.normalised_score))
         .collect_vec();
-        output[n] = (
-            alignments[0].1.clone(),
-            alignments.into_iter().map(|(a, _)| a).collect(),
-        );
     }
     output
 }
@@ -91,26 +84,25 @@ pub fn consecutive_align<const STEPS: usize>(
 #[cfg(feature = "rayon")]
 pub fn par_consecutive_align<const STEPS: usize>(
     sequence: LinearPeptide,
-    genes: &[(GeneType, bool)],
+    genes: &[(GeneType, Type)],
     species: Option<HashSet<Species>>,
     chains: Option<HashSet<ChainType>>,
     allele: AlleleSelection,
     tolerance: Tolerance,
     matrix: &[[i8; AminoAcid::TOTAL_NUMBER]; AminoAcid::TOTAL_NUMBER],
     return_number: usize,
-) -> Vec<(Alignment, Vec<Allele<'static>>)> {
+) -> Vec<Vec<(Allele<'static>, Alignment)>> {
     use rayon::iter::ParallelIterator;
 
     assert!(genes.len() >= 2);
-    const GLOBAL_A_LEFT: Type = Type::new(true, true, true, false);
-    let mut output: Vec<(Alignment, Vec<Allele<'static>>)> = Vec::with_capacity(genes.len());
+    let mut output: Vec<Vec<(Allele<'static>, Alignment)>> = Vec::with_capacity(genes.len());
 
     let mut prev = 0;
     for n in 1..genes.len() {
         let left_sequence = if n == 0 {
             sequence.clone()
         } else {
-            prev += output[n - 1].0.start_b + output[n - 1].0.len_b();
+            prev += output[n - 1][0].1.start_b + output[n - 1][0].1.len_b();
             let mut left_sequence: LinearPeptide =
                 sequence.clone().sequence.into_iter().skip(prev).collect();
             left_sequence.c_term = sequence.c_term.clone();
@@ -121,7 +113,7 @@ pub fn par_consecutive_align<const STEPS: usize>(
             break;
         }
 
-        let alignments = Selection {
+        output[n] = Selection {
             species: species.clone(),
             chains: chains.clone(),
             allele: allele.clone(),
@@ -137,21 +129,14 @@ pub fn par_consecutive_align<const STEPS: usize>(
                     left_sequence.clone(),
                     matrix,
                     tolerance,
-                    if genes[n].1 {
-                        GLOBAL_A_LEFT
-                    } else {
-                        Type::GLOBAL_A
-                    },
+                    genes[n].1,
                 ),
             )
         })
-        .sorted_by(|a, b| b.1.normalised_score.total_cmp(&a.1.normalised_score))
-        .take(return_number)
+        .collect::<Vec<_>>()
+        .into_iter()
+        .k_largest_by_key(return_number, |i| OrderedFloat(i.1.normalised_score))
         .collect_vec();
-        output[n] = (
-            alignments[0].1.clone(),
-            alignments.into_iter().map(|(a, _)| a).collect(),
-        );
     }
     output
 }
