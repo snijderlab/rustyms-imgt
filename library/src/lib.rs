@@ -16,7 +16,7 @@ pub use fancy::*;
 use germlines::{all_germlines, germlines, par_germlines};
 use itertools::Itertools;
 use rustyms::{
-    align::{Alignment, Type},
+    align::{AlignType, Alignment},
     AminoAcid, LinearPeptide, Tolerance,
 };
 pub use select::*;
@@ -26,7 +26,7 @@ pub use shared::*;
 /// If the sequence is too short to cover all genes only the genes that could be matched are returned.
 pub fn consecutive_align<const STEPS: usize>(
     sequence: LinearPeptide,
-    genes: &[(GeneType, Type)],
+    genes: &[(GeneType, AlignType)],
     species: Option<HashSet<Species>>,
     chains: Option<HashSet<ChainType>>,
     allele: AlleleSelection,
@@ -84,7 +84,7 @@ pub fn consecutive_align<const STEPS: usize>(
 #[cfg(feature = "rayon")]
 pub fn par_consecutive_align<const STEPS: usize>(
     sequence: LinearPeptide,
-    genes: &[(GeneType, Type)],
+    genes: &[(GeneType, AlignType)],
     species: Option<HashSet<Species>>,
     chains: Option<HashSet<ChainType>>,
     allele: AlleleSelection,
