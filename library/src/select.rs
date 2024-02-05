@@ -156,7 +156,7 @@ impl AlleleSelection {
 
 /// A returned allele
 #[non_exhaustive]
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Allele<'a> {
     /// The species where this gene originates from
     pub species: Species,
