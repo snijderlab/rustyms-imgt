@@ -307,7 +307,7 @@ impl Gene {
                 .parse()
                 .map_err(|()| format!("Invalid gene: `{}`", &s[3..4]))?;
             let mut start = 4;
-            let number = if &s[4..5] == "(" {
+            let number = if s.len() > 4 && &s[4..5] == "(" {
                 let end = s[5..].find(')').ok_or(format!(
                     "Invalid gene number `{}` out of `{}`",
                     &s[4..],

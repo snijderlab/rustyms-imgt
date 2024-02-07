@@ -13,7 +13,7 @@ mod shared;
 
 use crate::shared::*;
 use itertools::Itertools;
-use rustyms::{spectrum::AnnotatedPeak, AminoAcid};
+use rustyms::AminoAcid;
 
 fn main() {
     let file = File::open("../data/imgt.dat")
@@ -24,9 +24,9 @@ fn main() {
     let data = parse_dat(BufReader::new(file));
     let mut grouped = HashMap::new();
     let mut errors = Vec::new();
-    for element in data {
-        let species = element.as_ref().unwrap().species;
-        for gene in element.unwrap().genes {
+    for element in data.flatten() {
+        let species = element.species;
+        for gene in element.genes {
             match gene.clone().finish() {
                 Ok(gene) => grouped
                     .entry(species)
@@ -382,6 +382,9 @@ impl DataItem {
                     result.add_region(region);
                 }
                 let (key, location) = (&line[..data.ft_key_width], &line[data.ft_key_width..]);
+                if location.contains("join") {
+                    return Err("Location is a joined region".to_string());
+                }
                 let location = location
                     .trim()
                     .parse()
