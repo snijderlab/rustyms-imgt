@@ -13,7 +13,7 @@ mod shared;
 
 use crate::shared::*;
 use itertools::Itertools;
-use rustyms::AminoAcid;
+use rustyms::{spectrum::AnnotatedPeak, AminoAcid};
 
 fn main() {
     let file = File::open("../data/imgt.dat")
@@ -296,6 +296,35 @@ impl Location {
             }
         }
     }
+
+    /// Break the location around the given amino acid index in the location. If the position is outside the range or this location is a single it returns None.
+    fn splice(&self, position: usize) -> Option<(Self, Self)> {
+        match self {
+            Self::Normal(s) => {
+                let mid_point = *s.start() + position * 3;
+                if mid_point >= *s.end() {
+                    None
+                } else {
+                    Some((
+                        Self::Complement((*s.start())..=mid_point),
+                        Self::Complement(mid_point..=*s.end()),
+                    ))
+                }
+            }
+            Self::Complement(s) => {
+                let mid_point = *s.end() - position * 3;
+                if mid_point <= *s.start() {
+                    None
+                } else {
+                    Some((
+                        Self::Complement((*s.start())..=mid_point),
+                        Self::Complement(mid_point..=*s.end()),
+                    ))
+                }
+            }
+            _ => None,
+        }
+    }
 }
 
 impl Display for Location {
@@ -435,8 +464,8 @@ impl DataItem {
             "2nd-CYS",
             "CONSERVED-TRP",
             "J-REGION",
-            "J-TRP",
-            "J-PHE",
+            // "J-TRP",
+            // "J-PHE",
             "J-MOTIF",
             "CH1",
             "CH2",
@@ -469,12 +498,17 @@ impl DataItem {
 
     fn get_sequence(&self, slice: &Location, shift: usize) -> Option<(String, Vec<AminoAcid>)> {
         let (inner_shift, shift) = if shift == 2 { (1, 0) } else { (0, shift) };
+
         Some(translate(
             &match slice {
-                Location::Normal(range) => self
-                    .sequence
-                    .get(range.start() - inner_shift..=*range.end())?
-                    .to_string(),
+                Location::Normal(range) => {
+                    if *range.start() < inner_shift {
+                        return None;
+                    }
+                    self.sequence
+                        .get(range.start() - inner_shift..=*range.end())?
+                        .to_string()
+                }
                 Location::SingleNormal(index) => {
                     char::from(*self.sequence.as_bytes().get(*index)?).to_string()
                 }
@@ -588,6 +622,7 @@ impl IMGTGene {
                         .ok_or(format!("{key} does not have a sequence"))
                 })
         };
+        let mut additional_annotations = Vec::new();
         let regions = if self.key == "V-GENE" {
             vec![
                 (shared::Region::FR1, get("FR1-IMGT")?),
@@ -644,24 +679,37 @@ impl IMGTGene {
             }
             seq
         } else if self.key == "J-GENE" {
-            // dbg!(&self)
-            if self.regions.contains_key("FR4-IMGT") {
-                let fr4 = get("FR4-IMGT")?;
-                let j = get("J-REGION")?;
-                let cdr3 = (j.0[..j.0.len() - fr4.0.len()].to_vec(), j.1); // TODO: wrong location, breaks annotations
-                vec![(shared::Region::CDR3, cdr3), (shared::Region::FR4, fr4)]
-            } else if self.regions.contains_key("J-MOTIF") {
-                let motif = get("J-MOTIF")?;
-                let j = get("J-REGION")?;
-                let loc =
-                    j.1.get_aa_loc(&motif.1)
-                        .ok_or("J-MOTIF does not fall into J-REGION")?;
-                let cdr3 = (j.0[..*loc.start()].to_vec(), j.1.clone()); // TODO: wrong location, breaks annotations
-                let fr4 = (j.0[*loc.start()..].to_vec(), j.1);
-                vec![(shared::Region::CDR3, cdr3), (shared::Region::FR4, fr4)]
+            // if self.regions.contains_key("FR4-IMGT") {
+            //     let fr4 = get("FR4-IMGT")?;
+            //     let j = get("J-REGION")?;
+            //     let cdr3_len = j.0.len() - fr4.0.len();
+            //     let j = fix_j(j, cdr3_len);
+            //     additional_annotations.extend(j.1);
+            //     j.0
+            // } else if self.regions.contains_key("J-MOTIF") {
+            //     let motif = get("J-MOTIF")?;
+            //     let j = get("J-REGION")?;
+            //     let loc =
+            //         j.1.get_aa_loc(&motif.1)
+            //             .ok_or("J-MOTIF does not fall into J-REGION")?;
+            //     let j = fix_j(j, *loc.start());
+            //     additional_annotations.extend(j.1);
+            //     j.0
+            // } else {
+            let j = get("J-REGION")?;
+            let motif = j.0.iter().tuple_windows().position(|(a, b, _, d)| {
+                (*a == AminoAcid::W || *a == AminoAcid::F)
+                    && *b == AminoAcid::G
+                    && *d == AminoAcid::G
+            });
+            if let Some(motif_start) = motif {
+                let j = fix_j(j, motif_start);
+                additional_annotations.extend(j.1);
+                j.0
             } else {
-                vec![(shared::Region::FR4, get("J-REGION")?)] // TODO: not fully correct right, has some CDR3 as well, and has quite some conserved residues
+                vec![(shared::Region::FR4, j)] // TODO: not fully correct right, has some CDR3 as well, and has quite some conserved residues
             }
+            // }
         } else if self.key == "D-GENE" {
             vec![(shared::Region::CDR3, get("D-REGION")?)]
         } else {
@@ -693,6 +741,7 @@ impl IMGTGene {
                 .iter()
                 .map(|i| (Annotation::NGlycan, *i)),
         );
+        conserved.extend(additional_annotations);
         let (name, allele) = Gene::from_imgt_name_with_allele(self.allele.as_str())?;
         Ok(Germline {
             name,
@@ -730,4 +779,36 @@ fn find_possible_n_glycan_locations(sequence: &[AminoAcid]) -> Vec<usize> {
         }
     }
     result
+}
+
+fn fix_j(
+    j: (Vec<AminoAcid>, Location),
+    cdr3_length: usize,
+) -> (
+    Vec<(shared::Region, (Vec<AminoAcid>, Location))>,
+    Vec<(Annotation, usize)>,
+) {
+    let (cdr3_loc, fr4_loc) =
+        j.1.splice(cdr3_length)
+            .expect("CDR3 should fit in full FR4 of J gene");
+    let cdr3 = (j.0[..cdr3_length].to_vec(), cdr3_loc);
+    let fr4 = (j.0[cdr3_length..].to_vec(), fr4_loc);
+
+    let mut annotations = Vec::new();
+    if fr4.0[0] == AminoAcid::W {
+        annotations.push((Annotation::Tryptophan, cdr3_length));
+    } else if fr4.0[0] == AminoAcid::F {
+        annotations.push((Annotation::Phenylalanine, cdr3_length));
+    }
+    if fr4.0[1] == AminoAcid::G {
+        annotations.push((Annotation::Glycine, cdr3_length + 1));
+    }
+    if fr4.0[3] == AminoAcid::G {
+        annotations.push((Annotation::Glycine, cdr3_length + 3));
+    }
+
+    (
+        vec![(shared::Region::CDR3, cdr3), (shared::Region::FR4, fr4)],
+        annotations,
+    )
 }

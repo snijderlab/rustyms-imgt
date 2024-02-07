@@ -529,6 +529,7 @@ pub enum Annotation {
     Cysteine2,
     Tryptophan,
     Phenylalanine,
+    Glycine,
     NGlycan,
 }
 
@@ -542,6 +543,7 @@ impl Display for Annotation {
                 Self::Cysteine2 => "Cys2",
                 Self::Tryptophan => "Trp",
                 Self::Phenylalanine => "Phe",
+                Self::Glycine => "Gly",
                 Self::NGlycan => "NGly",
             }
         )
