@@ -1,5 +1,6 @@
 //! Copied over from a #654 in itertools until that is merged.
 //! https://github.com/rust-itertools/itertools/pull/654
+#![allow(dead_code)]
 use core::cmp::{Ordering, Reverse};
 use std::vec::{IntoIter, Vec};
 

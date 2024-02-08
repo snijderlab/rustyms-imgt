@@ -92,13 +92,36 @@ impl Chain {
                     .binary_search_by_key(&germline.alleles[0].0, |a| a.0)
                 {
                     Ok(allele_index) => {
-                        if germline.alleles[0].1.conserved.len()
-                            + germline.alleles[0].1.regions.len()
-                            > db[index].alleles[allele_index].1.conserved.len()
-                                + db[index].alleles[allele_index].1.regions.len()
-                        {
-                            db[index].alleles[allele_index] = germline.alleles.pop().unwrap()
-                        }
+                        // if germline.alleles[0].1.sequence
+                        //     == db[index].alleles[allele_index].1.sequence
+                        // {
+                        //     db[index].alleles[allele_index].2 = format!(
+                        //         "{}|{}",
+                        //         db[index].alleles[allele_index].2, germline.alleles[0].2
+                        //     );
+                        // } else {
+                        //     let mut found = false;
+                        //     for existing in &mut db[index].duplicates {
+                        //         if existing.1.sequence == germline.alleles[0].1.sequence {
+                        //             existing.2 =
+                        //                 format!("{}|{}", existing.2, germline.alleles[0].2);
+                        //             found = true;
+                        //         }
+                        //     }
+                        //     if !found {
+                        //         db[index].duplicates.push(germline.alleles.pop().unwrap())
+                        //     }
+                        // }
+                        // if germline.alleles[0].1.conserved.len()
+                        //     + germline.alleles[0].1.regions.len()
+                        //     > db[index].alleles[allele_index].1.conserved.len()
+                        //         + db[index].alleles[allele_index].1.regions.len()
+                        // {
+                        //     db[index].alleles[allele_index] = germline.alleles.pop().unwrap()
+                        // }
+                        panic!(
+                            "Not allowed to have multiple sequences for one allele in a germline"
+                        )
                     }
                     Err(allele_index) => db[index]
                         .alleles
@@ -485,6 +508,7 @@ pub enum Region {
     CH8,
     CH9,
     CHS,
+    CL,
     M,
     M1,
     M2,
@@ -514,6 +538,7 @@ impl Display for Region {
                 Self::CH8 => "CH8",
                 Self::CH9 => "CH9",
                 Self::CHS => "CHS",
+                Self::CL => "CL",
                 Self::M => "M",
                 Self::M1 => "M1",
                 Self::M2 => "M2",

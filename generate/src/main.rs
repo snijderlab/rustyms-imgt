@@ -24,14 +24,15 @@ fn main() {
     let data = parse_dat(BufReader::new(file));
     let mut grouped = HashMap::new();
     let mut errors = Vec::new();
+    let mut temp: Vec<(Species, SingleSeq)> = Vec::new();
     for element in data.flatten() {
         let species = element.species;
+        // if species != Species::HomoSapiens {
+        //     continue;
+        // }
         for gene in element.genes {
             match gene.clone().finish() {
-                Ok(gene) => grouped
-                    .entry(species)
-                    .or_insert(Germlines::new(species))
-                    .insert(gene),
+                Ok(gene) => temp.push((species, gene)),
                 Err(err) => {
                     errors.push((species, gene, err));
                 }
@@ -40,6 +41,44 @@ fn main() {
         //writeln!(output, "{}", element.unwrap()).unwrap();
     }
 
+    // Combine temp seqs
+    let mut deduped_temp: Vec<(Species, TemporaryGermline)> = Vec::new();
+    'sequences: for (species, seq) in temp {
+        for (dspecies, dseq) in &mut deduped_temp {
+            if *dspecies == species && dseq.name == seq.name {
+                dseq.add(seq);
+                continue 'sequences;
+            }
+        }
+        // If not found
+        deduped_temp.push((
+            species,
+            TemporaryGermline {
+                name: seq.name,
+                alleles: vec![(
+                    seq.allele,
+                    vec![TemporarySequence {
+                        acc: vec![seq.acc],
+                        sequence: seq.sequence,
+                        dna: vec![seq.dna],
+                    }],
+                )],
+            },
+        ))
+    }
+
+    // Save temp seqs in final data structure
+    for (species, entry) in deduped_temp {
+        if species == Species::HomoSapiens && entry.name.to_string() == "IGHA1" {
+            println!("{}", entry);
+        }
+        grouped
+            .entry(species)
+            .or_insert(Germlines::new(species))
+            .insert(entry.finalise())
+    }
+
+    // Keep track of all errors
     for (species, errors) in errors
         .iter()
         .map(|(species, gene, err)| (species, (gene, err)))
@@ -213,7 +252,8 @@ fn parse_dat<T: std::io::Read>(
         })
         .filter(|pre| {
             pre.kw.contains(&"immunoglobulin (IG)".to_string())
-                && pre.kw.contains(&"functional".to_string())
+                && (pre.kw.contains(&"functional".to_string())
+                    || pre.kw.contains(&"germline".to_string()))
                 && pre.os.is_some()
         })
         .map(DataItem::new)
@@ -386,6 +426,9 @@ impl DataItem {
                 if location.contains("join") {
                     return Err("Location is a joined region".to_string());
                 }
+                if location.contains('^') {
+                    return Err("Location is a ^ region".to_string());
+                }
                 let location = location
                     .trim()
                     .parse()
@@ -406,6 +449,7 @@ impl DataItem {
             }
             if let Some(current) = &mut current {
                 let trimmed = line.trim();
+                let lowercase = trimmed.to_lowercase();
                 if sequence {
                     current.reported_seq = trimmed.trim_end_matches('\"').to_string();
                     if trimmed.ends_with('\"') {
@@ -427,10 +471,13 @@ impl DataItem {
                     if let Some(i) = tail.find(']') {
                         current.splice_aa = AminoAcid::try_from(tail.as_bytes()[i - 1]).ok();
                     }
-                } else if trimmed.starts_with("/functional") {
+                } else if lowercase.starts_with("/functional")
+                    || lowercase.starts_with("/note=\"functional\"")
+                    || lowercase.starts_with("/imgt_note=\"functional\"")
+                {
                     current.functional = true;
-                } else if trimmed.starts_with("/partial") {
-                    current.partial = true;
+                    // } else if trimmed.starts_with("/partial") {
+                    //     current.partial = true;
                 }
             }
         }
@@ -472,18 +519,32 @@ impl DataItem {
             "J-REGION",
             // "J-TRP",
             // "J-PHE",
-            "J-MOTIF",
+            //"J-MOTIF",
             "CH1",
             "CH2",
+            "H-CH2",
             "CH3",
+            "CH3-CHS",
             "CH4",
+            "CH4-CHS",
             "CH5",
+            "CH5-CHS",
             "CH6",
+            "CH6-CHS",
             "CH7",
+            "CH7-CHS",
             "CH8",
+            "CH8-CHS",
             "CH9",
+            "CH9-CHS",
             "CHS",
+            "CL",
+            "C-REGION",
             "H", //"D-REGION",
+            "H1",
+            "H2",
+            "H3",
+            "H4",
             "M",
             "M1",
             "M2",
@@ -643,14 +704,14 @@ impl Display for Region {
             self.found_seq
                 .as_ref()
                 .map(|seq| seq.1 .0.iter().map(|a| a.char()).collect::<String>())
-                .unwrap_or("<NO SEQ!>".to_string()),
+                .unwrap_or_else(|e| format!("<NO SEQ!>: {e}")),
         )
     }
 }
 
 impl IMGTGene {
-    fn finish(self) -> Result<Germline, String> {
-        let get = |key| -> Result<(Vec<AminoAcid>, Location), String> {
+    fn finish(self) -> Result<SingleSeq, String> {
+        let get = |key| -> Result<(Vec<AminoAcid>, Location, String), String> {
             self.regions
                 .get(key)
                 .ok_or(format!("Could not find {key}"))
@@ -665,7 +726,7 @@ impl IMGTGene {
                                 .filter(|_| region.shift != 2)
                                 .unwrap_or_default();
                             final_seq.extend(seq.1 .0.clone());
-                            (final_seq, region.location.clone())
+                            (final_seq, region.location.clone(), seq.0.clone())
                         })
                         .map_err(|e| e.to_owned())
                 })
@@ -681,9 +742,14 @@ impl IMGTGene {
                 (shared::Region::CDR3, get("CDR3-IMGT")?),
             ]
         } else if self.key == "C-GENE" {
+            // if self.allele == "IGHA1*01" {
+            //     dbg!(&self);
+            // }
             let mut seq = Vec::new();
-            let mut possibly_add = |region, key: &str| -> Result<(), String> {
-                if self.regions.contains_key(key) {
+            let mut possibly_add = |region, key: &str, only_if_empty: bool| -> Result<(), String> {
+                if self.regions.contains_key(key)
+                    && ((only_if_empty && seq.is_empty()) || !only_if_empty)
+                {
                     seq.push((
                         region,
                         self.regions
@@ -700,7 +766,7 @@ impl IMGTGene {
                                             .filter(|_| region.shift != 2)
                                             .unwrap_or_default();
                                         final_seq.extend(seq.1 .0.clone());
-                                        (final_seq, region.location.clone())
+                                        (final_seq, region.location.clone(), seq.0.clone())
                                     })
                                     .map_err(|e| e.to_owned())
                             })?,
@@ -708,20 +774,76 @@ impl IMGTGene {
                 }
                 Ok(())
             };
-            possibly_add(shared::Region::CH1, "CH1")?;
-            possibly_add(shared::Region::H, "H")?;
-            possibly_add(shared::Region::CH2, "CH2")?;
-            possibly_add(shared::Region::CH3, "CH3")?;
-            possibly_add(shared::Region::CH4, "CH4")?;
-            possibly_add(shared::Region::CH5, "CH5")?;
-            possibly_add(shared::Region::CH6, "CH6")?;
-            possibly_add(shared::Region::CH7, "CH7")?;
-            possibly_add(shared::Region::CH8, "CH8")?;
-            possibly_add(shared::Region::CH9, "CH9")?;
-            possibly_add(shared::Region::CHS, "CHS")?; // TODO: what if only the combined CHX-CHS is present in the database
-                                                       // possibly_add(shared::Region::M, "M")?; // TODO: Figure out if support for membrane bound is needed, if so provide a way to switch between the two versions
-                                                       // possibly_add(shared::Region::M1, "M1")?;
-                                                       // possibly_add(shared::Region::M2, "M2")?;
+
+            // Heavy chain
+            possibly_add(shared::Region::CH1, "CH1", false)?;
+            // Try to detect the best H/CH2
+            if self.regions.contains_key("H") && self.regions.contains_key("CH2") {
+                possibly_add(shared::Region::H, "H", false)?;
+                possibly_add(shared::Region::CH2, "CH2", false)?;
+            } else if self.regions.contains_key("H-CH2") {
+                possibly_add(shared::Region::CH2, "H-CH2", false)?;
+            } else {
+                possibly_add(shared::Region::H, "H1", false)?;
+                possibly_add(shared::Region::H, "H2", false)?;
+                possibly_add(shared::Region::H, "H3", false)?;
+                possibly_add(shared::Region::H, "H4", false)?;
+                possibly_add(shared::Region::CH2, "CH2", false)?;
+            }
+            let mut secretory = false;
+            if self.regions.contains_key("CH3") && self.regions.contains_key("CHS") {
+                possibly_add(shared::Region::CH3, "CH3", false)?;
+            } else if self.regions.contains_key("CH3-CHS") {
+                possibly_add(shared::Region::CH3, "CH3-CHS", false)?;
+                secretory = true;
+            }
+            if self.regions.contains_key("CH4") && self.regions.contains_key("CHS") {
+                possibly_add(shared::Region::CH4, "CH4", false)?;
+            } else if self.regions.contains_key("CH4-CHS") {
+                possibly_add(shared::Region::CH4, "CH4-CHS", false)?;
+                secretory = true;
+            }
+            if self.regions.contains_key("CH5") && self.regions.contains_key("CHS") {
+                possibly_add(shared::Region::CH5, "CH5", false)?;
+            } else if self.regions.contains_key("CH5-CHS") {
+                possibly_add(shared::Region::CH5, "CH5-CHS", false)?;
+                secretory = true;
+            }
+            if self.regions.contains_key("CH6") && self.regions.contains_key("CHS") {
+                possibly_add(shared::Region::CH6, "CH6", false)?;
+            } else if self.regions.contains_key("CH6-CHS") {
+                possibly_add(shared::Region::CH6, "CH6-CHS", false)?;
+                secretory = true;
+            }
+            if self.regions.contains_key("CH7") && self.regions.contains_key("CHS") {
+                possibly_add(shared::Region::CH7, "CH7", false)?;
+            } else if self.regions.contains_key("CH7-CHS") {
+                possibly_add(shared::Region::CH7, "CH7-CHS", false)?;
+                secretory = true;
+            }
+            if self.regions.contains_key("CH8") && self.regions.contains_key("CHS") {
+                possibly_add(shared::Region::CH8, "CH8", false)?;
+            } else if self.regions.contains_key("CH8-CHS") {
+                possibly_add(shared::Region::CH8, "CH8-CHS", false)?;
+                secretory = true;
+            }
+            if self.regions.contains_key("CH9") && self.regions.contains_key("CHS") {
+                possibly_add(shared::Region::CH9, "CH9", false)?;
+            } else if self.regions.contains_key("CH9-CHS") {
+                possibly_add(shared::Region::CH9, "CH9-CHS", false)?;
+                secretory = true;
+            }
+            if !secretory {
+                possibly_add(shared::Region::CHS, "CHS", false)?;
+            }
+            // possibly_add(shared::Region::M, "M")?; // TODO: Figure out if support for membrane bound is needed, if so provide a way to switch between the two versions
+            // possibly_add(shared::Region::M1, "M1")?;
+            // possibly_add(shared::Region::M2, "M2")?;
+
+            // Otherwise assume light chain
+            possibly_add(shared::Region::CL, "CL", true)?;
+            possibly_add(shared::Region::CL, "C-REGION", true)?;
+
             if seq.is_empty() {
                 return Err("Empty C sequence".to_string());
             }
@@ -767,6 +889,7 @@ impl IMGTGene {
             Vec::new()
         };
         let sequence: Vec<AminoAcid> = regions.iter().flat_map(|reg| reg.1 .0.clone()).collect();
+        let dna: String = regions.iter().map(|reg| reg.1 .2.clone()).collect();
         let region_lengths = regions.iter().map(|reg| (reg.0, reg.1 .0.len())).collect();
         let conserved_map = HashMap::from([
             ("1st-CYS", Annotation::Cysteine1),
@@ -794,23 +917,23 @@ impl IMGTGene {
         );
         conserved.extend(additional_annotations);
         let (name, allele) = Gene::from_imgt_name_with_allele(self.allele.as_str())?;
-        Ok(Germline {
+        Ok(SingleSeq {
             name,
-            alleles: vec![(
-                allele,
-                AnnotatedSequence {
-                    sequence: sequence.into(),
-                    regions: region_lengths,
-                    conserved,
-                },
-            )],
+            allele,
+            acc: self.acc.clone(),
+            sequence: AnnotatedSequence {
+                sequence: sequence.into(),
+                regions: region_lengths,
+                conserved,
+            },
+            dna,
         })
     }
 }
 
 fn find_aa_location(
     location: &Location,
-    sections: &[(shared::Region, (Vec<AminoAcid>, Location))],
+    sections: &[(shared::Region, (Vec<AminoAcid>, Location, String))],
 ) -> Option<usize> {
     let mut start = 0;
     for section in sections {
@@ -833,17 +956,25 @@ fn find_possible_n_glycan_locations(sequence: &[AminoAcid]) -> Vec<usize> {
 }
 
 fn fix_j(
-    j: (Vec<AminoAcid>, Location),
+    j: (Vec<AminoAcid>, Location, String),
     cdr3_length: usize,
 ) -> (
-    Vec<(shared::Region, (Vec<AminoAcid>, Location))>,
+    Vec<(shared::Region, (Vec<AminoAcid>, Location, String))>,
     Vec<(Annotation, usize)>,
 ) {
     let (cdr3_loc, fr4_loc) =
         j.1.splice(cdr3_length)
             .expect("CDR3 should fit in full FR4 of J gene");
-    let cdr3 = (j.0[..cdr3_length].to_vec(), cdr3_loc);
-    let fr4 = (j.0[cdr3_length..].to_vec(), fr4_loc);
+    let cdr3 = (
+        j.0[..cdr3_length].to_vec(),
+        cdr3_loc,
+        j.2[..cdr3_length].to_owned(),
+    );
+    let fr4 = (
+        j.0[cdr3_length..].to_vec(),
+        fr4_loc,
+        j.2[cdr3_length..].to_owned(),
+    );
 
     let mut annotations = Vec::new();
     if fr4.0[0] == AminoAcid::W {
@@ -862,4 +993,136 @@ fn fix_j(
         vec![(shared::Region::CDR3, cdr3), (shared::Region::FR4, fr4)],
         annotations,
     )
+}
+
+#[derive(Debug)]
+struct SingleSeq {
+    name: Gene,
+    allele: usize,
+    acc: String,
+    sequence: AnnotatedSequence,
+    dna: String,
+}
+
+struct TemporaryGermline {
+    name: Gene,
+    alleles: Vec<(usize, Vec<TemporarySequence>)>,
+}
+
+impl TemporaryGermline {
+    fn add(&mut self, single: SingleSeq) {
+        for al in &mut self.alleles {
+            if al.0 == single.allele {
+                for s in &mut al.1 {
+                    if s.sequence.sequence == single.sequence.sequence {
+                        s.acc.push(single.acc);
+                        if !s.dna.iter().any(|dna| *dna == single.dna) {
+                            s.dna.push(single.dna);
+                        }
+                        return;
+                    }
+                }
+                al.1.push(TemporarySequence {
+                    acc: vec![single.acc],
+                    sequence: single.sequence,
+                    dna: vec![single.dna],
+                });
+                return;
+            }
+        }
+        // If not found
+        self.alleles.push((
+            single.allele,
+            vec![TemporarySequence {
+                acc: vec![single.acc],
+                sequence: single.sequence,
+                dna: vec![single.dna],
+            }],
+        ));
+        self.alleles.sort_by_key(|a| a.0); // Maybe do the fancy insert at the right place trick
+    }
+
+    fn finalise(self) -> Germline {
+        Germline {
+            name: self.name,
+            alleles: self
+                .alleles
+                .into_iter()
+                .map(|(a, seqs)| {
+                    (
+                        a,
+                        seqs.into_iter()
+                            .max_by_key(|s| s.acc.len())
+                            .unwrap()
+                            .sequence,
+                    )
+                })
+                .collect(),
+        }
+    }
+}
+
+impl std::fmt::Display for TemporaryGermline {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        writeln!(f, "GENE: {}", self.name)?;
+        for allele in &self.alleles {
+            writeln!(f, "ALLELE {}:", allele.0)?;
+            for (index, seq) in allele.1.iter().enumerate() {
+                writeln!(
+                    f,
+                    "{}┬ ACC {}:",
+                    if index == allele.1.len() - 1 {
+                        '└'
+                    } else {
+                        '├'
+                    },
+                    seq.acc.iter().join("|")
+                )?;
+                writeln!(
+                    f,
+                    "{}├ AA: {}",
+                    if index == allele.1.len() - 1 {
+                        ' '
+                    } else {
+                        '│'
+                    },
+                    seq.sequence.sequence
+                )?;
+                writeln!(
+                    f,
+                    "{}└┬ DNA:",
+                    if index == allele.1.len() - 1 {
+                        ' '
+                    } else {
+                        '│'
+                    },
+                )?;
+                for (di, dna) in seq.dna.iter().enumerate() {
+                    writeln!(
+                        f,
+                        "{} {} {}",
+                        if index == allele.1.len() - 1 {
+                            ' '
+                        } else {
+                            '│'
+                        },
+                        if di == seq.dna.len() - 1 {
+                            '└'
+                        } else {
+                            '├'
+                        },
+                        dna
+                    )?;
+                }
+            }
+        }
+        writeln!(f)
+    }
+}
+
+#[derive(Debug)]
+struct TemporarySequence {
+    acc: Vec<String>,
+    sequence: AnnotatedSequence,
+    dna: Vec<String>,
 }

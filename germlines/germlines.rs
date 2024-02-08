@@ -7,6 +7,7 @@ Species::BosTaurus => Some(lock_BosTaurus()),
 Species::CamelusDromedarius => Some(lock_CamelusDromedarius()),
 Species::CanisLupusFamiliaris => Some(lock_CanisLupusFamiliaris()),
 Species::CapraHircus => Some(lock_CapraHircus()),
+Species::CercocebusAtys => Some(lock_CercocebusAtys()),
 Species::DanioRerio => Some(lock_DanioRerio()),
 Species::EquusCaballus => Some(lock_EquusCaballus()),
 Species::FelisCatus => Some(lock_FelisCatus()),
@@ -18,14 +19,24 @@ Species::IctalurusPunctatus => Some(lock_IctalurusPunctatus()),
 Species::LemurCatta => Some(lock_LemurCatta()),
 Species::MacacaFascicularis => Some(lock_MacacaFascicularis()),
 Species::MacacaMulatta => Some(lock_MacacaMulatta()),
+Species::MacacaNemestrina => Some(lock_MacacaNemestrina()),
+Species::MusCookii => Some(lock_MusCookii()),
+Species::MusMinutoides => Some(lock_MusMinutoides()),
 Species::MusMusculus => Some(lock_MusMusculus()),
+Species::MusMusculusCastaneus => Some(lock_MusMusculusCastaneus()),
 Species::MusMusculusDomesticus => Some(lock_MusMusculusDomesticus()),
+Species::MusMusculusMolossinus => Some(lock_MusMusculusMolossinus()),
+Species::MusMusculusMusculus => Some(lock_MusMusculusMusculus()),
+Species::MusPahari => Some(lock_MusPahari()),
+Species::MusSaxicola => Some(lock_MusSaxicola()),
+Species::MusSp => Some(lock_MusSp()),
 Species::MusSpretus => Some(lock_MusSpretus()),
 Species::MustelaPutoriusFuro => Some(lock_MustelaPutoriusFuro()),
 Species::OncorhynchusMykiss => Some(lock_OncorhynchusMykiss()),
 Species::OrnithorhynchusAnatinus => Some(lock_OrnithorhynchusAnatinus()),
 Species::OryctolagusCuniculus => Some(lock_OryctolagusCuniculus()),
 Species::OvisAries => Some(lock_OvisAries()),
+Species::PapioAnubisAnubis => Some(lock_PapioAnubisAnubis()),
 Species::PongoAbelii => Some(lock_PongoAbelii()),
 Species::PongoPygmaeus => Some(lock_PongoPygmaeus()),
 Species::RattusNorvegicus => Some(lock_RattusNorvegicus()),
@@ -39,6 +50,7 @@ std::iter::once(lock_BosTaurus())
 .chain(std::iter::once(lock_CamelusDromedarius()))
 .chain(std::iter::once(lock_CanisLupusFamiliaris()))
 .chain(std::iter::once(lock_CapraHircus()))
+.chain(std::iter::once(lock_CercocebusAtys()))
 .chain(std::iter::once(lock_DanioRerio()))
 .chain(std::iter::once(lock_EquusCaballus()))
 .chain(std::iter::once(lock_FelisCatus()))
@@ -50,14 +62,24 @@ std::iter::once(lock_BosTaurus())
 .chain(std::iter::once(lock_LemurCatta()))
 .chain(std::iter::once(lock_MacacaFascicularis()))
 .chain(std::iter::once(lock_MacacaMulatta()))
+.chain(std::iter::once(lock_MacacaNemestrina()))
+.chain(std::iter::once(lock_MusCookii()))
+.chain(std::iter::once(lock_MusMinutoides()))
 .chain(std::iter::once(lock_MusMusculus()))
+.chain(std::iter::once(lock_MusMusculusCastaneus()))
 .chain(std::iter::once(lock_MusMusculusDomesticus()))
+.chain(std::iter::once(lock_MusMusculusMolossinus()))
+.chain(std::iter::once(lock_MusMusculusMusculus()))
+.chain(std::iter::once(lock_MusPahari()))
+.chain(std::iter::once(lock_MusSaxicola()))
+.chain(std::iter::once(lock_MusSp()))
 .chain(std::iter::once(lock_MusSpretus()))
 .chain(std::iter::once(lock_MustelaPutoriusFuro()))
 .chain(std::iter::once(lock_OncorhynchusMykiss()))
 .chain(std::iter::once(lock_OrnithorhynchusAnatinus()))
 .chain(std::iter::once(lock_OryctolagusCuniculus()))
 .chain(std::iter::once(lock_OvisAries()))
+.chain(std::iter::once(lock_PapioAnubisAnubis()))
 .chain(std::iter::once(lock_PongoAbelii()))
 .chain(std::iter::once(lock_PongoPygmaeus()))
 .chain(std::iter::once(lock_RattusNorvegicus()))
@@ -74,6 +96,7 @@ rayon::iter::once(lock_BosTaurus())
 .chain(rayon::iter::once(lock_CamelusDromedarius()))
 .chain(rayon::iter::once(lock_CanisLupusFamiliaris()))
 .chain(rayon::iter::once(lock_CapraHircus()))
+.chain(rayon::iter::once(lock_CercocebusAtys()))
 .chain(rayon::iter::once(lock_DanioRerio()))
 .chain(rayon::iter::once(lock_EquusCaballus()))
 .chain(rayon::iter::once(lock_FelisCatus()))
@@ -85,14 +108,24 @@ rayon::iter::once(lock_BosTaurus())
 .chain(rayon::iter::once(lock_LemurCatta()))
 .chain(rayon::iter::once(lock_MacacaFascicularis()))
 .chain(rayon::iter::once(lock_MacacaMulatta()))
+.chain(rayon::iter::once(lock_MacacaNemestrina()))
+.chain(rayon::iter::once(lock_MusCookii()))
+.chain(rayon::iter::once(lock_MusMinutoides()))
 .chain(rayon::iter::once(lock_MusMusculus()))
+.chain(rayon::iter::once(lock_MusMusculusCastaneus()))
 .chain(rayon::iter::once(lock_MusMusculusDomesticus()))
+.chain(rayon::iter::once(lock_MusMusculusMolossinus()))
+.chain(rayon::iter::once(lock_MusMusculusMusculus()))
+.chain(rayon::iter::once(lock_MusPahari()))
+.chain(rayon::iter::once(lock_MusSaxicola()))
+.chain(rayon::iter::once(lock_MusSp()))
 .chain(rayon::iter::once(lock_MusSpretus()))
 .chain(rayon::iter::once(lock_MustelaPutoriusFuro()))
 .chain(rayon::iter::once(lock_OncorhynchusMykiss()))
 .chain(rayon::iter::once(lock_OrnithorhynchusAnatinus()))
 .chain(rayon::iter::once(lock_OryctolagusCuniculus()))
 .chain(rayon::iter::once(lock_OvisAries()))
+.chain(rayon::iter::once(lock_PapioAnubisAnubis()))
 .chain(rayon::iter::once(lock_PongoAbelii()))
 .chain(rayon::iter::once(lock_PongoPygmaeus()))
 .chain(rayon::iter::once(lock_RattusNorvegicus()))
@@ -108,6 +141,8 @@ static LOCK_CanisLupusFamiliaris: OnceLock<Germlines> = OnceLock::new();
 fn lock_CanisLupusFamiliaris()->&'static Germlines{LOCK_CanisLupusFamiliaris.get_or_init(|| {bincode::deserialize(include_bytes!("Domestic dog.bin")).unwrap()})}
 static LOCK_CapraHircus: OnceLock<Germlines> = OnceLock::new();
 fn lock_CapraHircus()->&'static Germlines{LOCK_CapraHircus.get_or_init(|| {bincode::deserialize(include_bytes!("Domestic goat.bin")).unwrap()})}
+static LOCK_CercocebusAtys: OnceLock<Germlines> = OnceLock::new();
+fn lock_CercocebusAtys()->&'static Germlines{LOCK_CercocebusAtys.get_or_init(|| {bincode::deserialize(include_bytes!("Sooty mangabey.bin")).unwrap()})}
 static LOCK_DanioRerio: OnceLock<Germlines> = OnceLock::new();
 fn lock_DanioRerio()->&'static Germlines{LOCK_DanioRerio.get_or_init(|| {bincode::deserialize(include_bytes!("Zebrafish.bin")).unwrap()})}
 static LOCK_EquusCaballus: OnceLock<Germlines> = OnceLock::new();
@@ -130,10 +165,28 @@ static LOCK_MacacaFascicularis: OnceLock<Germlines> = OnceLock::new();
 fn lock_MacacaFascicularis()->&'static Germlines{LOCK_MacacaFascicularis.get_or_init(|| {bincode::deserialize(include_bytes!("Crab-eating macaque.bin")).unwrap()})}
 static LOCK_MacacaMulatta: OnceLock<Germlines> = OnceLock::new();
 fn lock_MacacaMulatta()->&'static Germlines{LOCK_MacacaMulatta.get_or_init(|| {bincode::deserialize(include_bytes!("Rhesus monkey.bin")).unwrap()})}
+static LOCK_MacacaNemestrina: OnceLock<Germlines> = OnceLock::new();
+fn lock_MacacaNemestrina()->&'static Germlines{LOCK_MacacaNemestrina.get_or_init(|| {bincode::deserialize(include_bytes!("Pig-tailed macaque.bin")).unwrap()})}
+static LOCK_MusCookii: OnceLock<Germlines> = OnceLock::new();
+fn lock_MusCookii()->&'static Germlines{LOCK_MusCookii.get_or_init(|| {bincode::deserialize(include_bytes!("Cook's mouse.bin")).unwrap()})}
+static LOCK_MusMinutoides: OnceLock<Germlines> = OnceLock::new();
+fn lock_MusMinutoides()->&'static Germlines{LOCK_MusMinutoides.get_or_init(|| {bincode::deserialize(include_bytes!("Southern African pygmy mouse.bin")).unwrap()})}
 static LOCK_MusMusculus: OnceLock<Germlines> = OnceLock::new();
 fn lock_MusMusculus()->&'static Germlines{LOCK_MusMusculus.get_or_init(|| {bincode::deserialize(include_bytes!("House mouse.bin")).unwrap()})}
+static LOCK_MusMusculusCastaneus: OnceLock<Germlines> = OnceLock::new();
+fn lock_MusMusculusCastaneus()->&'static Germlines{LOCK_MusMusculusCastaneus.get_or_init(|| {bincode::deserialize(include_bytes!("Southeastern Asian house mouse.bin")).unwrap()})}
 static LOCK_MusMusculusDomesticus: OnceLock<Germlines> = OnceLock::new();
 fn lock_MusMusculusDomesticus()->&'static Germlines{LOCK_MusMusculusDomesticus.get_or_init(|| {bincode::deserialize(include_bytes!("Western European house mouse.bin")).unwrap()})}
+static LOCK_MusMusculusMolossinus: OnceLock<Germlines> = OnceLock::new();
+fn lock_MusMusculusMolossinus()->&'static Germlines{LOCK_MusMusculusMolossinus.get_or_init(|| {bincode::deserialize(include_bytes!("Japanese wild mouse.bin")).unwrap()})}
+static LOCK_MusMusculusMusculus: OnceLock<Germlines> = OnceLock::new();
+fn lock_MusMusculusMusculus()->&'static Germlines{LOCK_MusMusculusMusculus.get_or_init(|| {bincode::deserialize(include_bytes!("Eastern European house mouse.bin")).unwrap()})}
+static LOCK_MusPahari: OnceLock<Germlines> = OnceLock::new();
+fn lock_MusPahari()->&'static Germlines{LOCK_MusPahari.get_or_init(|| {bincode::deserialize(include_bytes!("Shrew mouse.bin")).unwrap()})}
+static LOCK_MusSaxicola: OnceLock<Germlines> = OnceLock::new();
+fn lock_MusSaxicola()->&'static Germlines{LOCK_MusSaxicola.get_or_init(|| {bincode::deserialize(include_bytes!("Spiny mouse.bin")).unwrap()})}
+static LOCK_MusSp: OnceLock<Germlines> = OnceLock::new();
+fn lock_MusSp()->&'static Germlines{LOCK_MusSp.get_or_init(|| {bincode::deserialize(include_bytes!("Mice.bin")).unwrap()})}
 static LOCK_MusSpretus: OnceLock<Germlines> = OnceLock::new();
 fn lock_MusSpretus()->&'static Germlines{LOCK_MusSpretus.get_or_init(|| {bincode::deserialize(include_bytes!("Western wild mouse.bin")).unwrap()})}
 static LOCK_MustelaPutoriusFuro: OnceLock<Germlines> = OnceLock::new();
@@ -146,6 +199,8 @@ static LOCK_OryctolagusCuniculus: OnceLock<Germlines> = OnceLock::new();
 fn lock_OryctolagusCuniculus()->&'static Germlines{LOCK_OryctolagusCuniculus.get_or_init(|| {bincode::deserialize(include_bytes!("Rabbit.bin")).unwrap()})}
 static LOCK_OvisAries: OnceLock<Germlines> = OnceLock::new();
 fn lock_OvisAries()->&'static Germlines{LOCK_OvisAries.get_or_init(|| {bincode::deserialize(include_bytes!("Domestic sheep.bin")).unwrap()})}
+static LOCK_PapioAnubisAnubis: OnceLock<Germlines> = OnceLock::new();
+fn lock_PapioAnubisAnubis()->&'static Germlines{LOCK_PapioAnubisAnubis.get_or_init(|| {bincode::deserialize(include_bytes!("Olive baboon anubis.bin")).unwrap()})}
 static LOCK_PongoAbelii: OnceLock<Germlines> = OnceLock::new();
 fn lock_PongoAbelii()->&'static Germlines{LOCK_PongoAbelii.get_or_init(|| {bincode::deserialize(include_bytes!("Sumatran orangutan.bin")).unwrap()})}
 static LOCK_PongoPygmaeus: OnceLock<Germlines> = OnceLock::new();
