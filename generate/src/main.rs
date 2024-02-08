@@ -200,10 +200,9 @@ fn parse_dat<T: std::io::Read>(
                             None
                         });
                     } else if line.starts_with("  ") {
-                        data.sq.extend(
-                            line.chars()
-                                .filter(|c| *c == 'c' || *c == 'a' || *c == 't' || *c == 'g'),
-                        )
+                        data.sq.extend(line.chars().filter(|c| {
+                            *c == 'c' || *c == 'a' || *c == 't' || *c == 'g' || *c == 'n'
+                        }))
                     }
                 } else {
                     return Some(data);
@@ -241,6 +240,7 @@ struct DataItem {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 struct IMGTGene {
+    acc: String,
     key: String,
     location: Location,
     allele: String,
@@ -249,10 +249,11 @@ struct IMGTGene {
 
 #[derive(Clone, Debug, Hash, Eq, PartialEq)]
 struct Region {
+    acc: String,
     key: String,
     location: Location,
     reported_seq: String,
-    found_seq: Option<(String, Vec<AminoAcid>)>,
+    found_seq: Result<(String, AASequence), String>,
     allele: String,
     functional: bool,
     partial: bool,
@@ -390,10 +391,11 @@ impl DataItem {
                     .parse()
                     .unwrap_or_else(|_| panic!("`{}` not a valid location", location));
                 current = Some(Region {
+                    acc: result.id.clone(),
                     key: key.trim().to_string(),
                     location,
                     reported_seq: String::new(),
-                    found_seq: None,
+                    found_seq: Err("Not loaded".to_string()),
                     allele: String::new(),
                     functional: false,
                     partial: false,
@@ -450,6 +452,7 @@ impl DataItem {
             && region.allele.starts_with("IG")
         {
             self.genes.push(IMGTGene {
+                acc: region.acc,
                 key: region.key,
                 location: region.location,
                 allele: region.allele,
@@ -499,38 +502,71 @@ impl DataItem {
         }
     }
 
-    fn get_sequence(&self, slice: &Location, shift: usize) -> Option<(String, Vec<AminoAcid>)> {
+    fn get_sequence(&self, slice: &Location, shift: usize) -> Result<(String, AASequence), String> {
         let (inner_shift, shift) = if shift == 2 { (1, 0) } else { (0, shift) };
 
-        Some(translate(
+        translate(
             &match slice {
                 Location::Normal(range) => {
                     if *range.start() < inner_shift {
-                        return None;
+                        return Err("Shift outside of range".to_string());
                     }
                     self.sequence
-                        .get(range.start() - inner_shift..=*range.end())?
+                        .get(range.start() - inner_shift..=*range.end())
+                        .ok_or("Normal outside of range")?
                         .to_string()
                 }
-                Location::SingleNormal(index) => {
-                    char::from(*self.sequence.as_bytes().get(*index)?).to_string()
-                }
+                Location::SingleNormal(index) => char::from(
+                    *self
+                        .sequence
+                        .as_bytes()
+                        .get(*index)
+                        .ok_or("Single normal outside of range")?,
+                )
+                .to_string(),
                 Location::Complement(range) => complement(
                     self.sequence
-                        .get(*range.start()..=*range.end() + inner_shift)?
+                        .get(*range.start()..=*range.end() + inner_shift)
+                        .ok_or("Complement outside of range")?
                         .to_string(),
                 ),
-                Location::SingleComplement(index) => {
-                    complement(char::from(*self.sequence.as_bytes().get(*index)?).to_string())
-                }
+                Location::SingleComplement(index) => complement(
+                    char::from(
+                        *self
+                            .sequence
+                            .as_bytes()
+                            .get(*index)
+                            .ok_or("Single complement outside of range")?,
+                    )
+                    .to_string(),
+                ),
             }[shift..],
-        ))
-        .map(|(s, v)| (s.to_owned(), v))
+        )
+        .map(|(s, v)| (s.to_owned(), AASequence(v)))
+    }
+}
+
+#[derive(Clone, Hash, Eq, PartialEq)]
+struct AASequence(Vec<AminoAcid>);
+
+impl std::fmt::Debug for AASequence {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "[{}]",
+            self.0.iter().map(|a| a.char()).collect::<String>()
+        )
     }
 }
 
 fn complement(s: String) -> String {
-    let map = HashMap::from([(b'a', b't'), (b't', b'a'), (b'c', b'g'), (b'g', b'c')]);
+    let map = HashMap::from([
+        (b'a', b't'),
+        (b't', b'a'),
+        (b'c', b'g'),
+        (b'g', b'c'),
+        (b'n', b'n'),
+    ]);
     String::from_utf8(
         s.as_bytes()
             .iter()
@@ -544,21 +580,30 @@ fn complement(s: String) -> String {
     .unwrap()
 }
 
-fn translate(s: &str) -> (&str, Vec<AminoAcid>) {
+fn translate(s: &str) -> Result<(&str, Vec<AminoAcid>), String> {
     if s.len() < 3 {
-        (s, Vec::new())
+        Ok((s, Vec::new()))
     } else {
-        (
+        Ok((
             s,
             (0..=s.len() - 3)
                 .step_by(3)
                 .filter_map(|chunk| {
-                    AminoAcid::from_dna(&s[chunk..chunk + 3]).unwrap_or_else(|()| {
-                        panic!("Not a valid codon: `{}`", &s[chunk..chunk + 3])
-                    })
+                    invert(
+                        AminoAcid::from_dna(&s[chunk..chunk + 3])
+                            .map_err(|()| format!("Not a valid codon: `{}`", &s[chunk..chunk + 3])),
+                    )
                 })
-                .collect(),
-        )
+                .collect::<Result<Vec<AminoAcid>, String>>()?,
+        ))
+    }
+}
+
+fn invert<T, E>(x: Result<Option<T>, E>) -> Option<Result<T, E>> {
+    match x {
+        Ok(None) => None,
+        Ok(Some(a)) => Some(Ok(a)),
+        Err(e) => Some(Err(e)),
     }
 }
 
@@ -597,7 +642,7 @@ impl Display for Region {
             // self.found_seq.0,
             self.found_seq
                 .as_ref()
-                .map(|seq| seq.1.iter().map(|a| a.char()).collect::<String>())
+                .map(|seq| seq.1 .0.iter().map(|a| a.char()).collect::<String>())
                 .unwrap_or("<NO SEQ!>".to_string()),
         )
     }
@@ -619,10 +664,10 @@ impl IMGTGene {
                                 .map(|aa| vec![aa])
                                 .filter(|_| region.shift != 2)
                                 .unwrap_or_default();
-                            final_seq.extend(seq.1.clone());
+                            final_seq.extend(seq.1 .0.clone());
                             (final_seq, region.location.clone())
                         })
-                        .ok_or(format!("{key} does not have a sequence"))
+                        .map_err(|e| e.to_owned())
                 })
         };
         let mut additional_annotations = Vec::new();
@@ -654,10 +699,10 @@ impl IMGTGene {
                                             .map(|aa| vec![aa])
                                             .filter(|_| region.shift != 2)
                                             .unwrap_or_default();
-                                        final_seq.extend(seq.1.clone());
+                                        final_seq.extend(seq.1 .0.clone());
                                         (final_seq, region.location.clone())
                                     })
-                                    .ok_or(format!("{key} does not have a sequence"))
+                                    .map_err(|e| e.to_owned())
                             })?,
                     ))
                 }
@@ -699,6 +744,9 @@ impl IMGTGene {
             //     additional_annotations.extend(j.1);
             //     j.0
             // } else {
+            // if self.allele == "IGKJ1*01" {
+            //     dbg!(&self);
+            // }
             let j = get("J-REGION")?;
             let motif = j.0.iter().tuple_windows().position(|(a, b, _, d)| {
                 (*a == AminoAcid::W || *a == AminoAcid::F)
