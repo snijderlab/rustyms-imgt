@@ -94,7 +94,7 @@ version = "0.1.0"
 dependencies = [
  "bincode",
  "itertools",
- "rustyms",
+ "rustyms 0.7.0 (git+https://github.com/snijderlab/rustyms?branch=release)",
  "serde",
 ]
 
@@ -105,7 +105,7 @@ dependencies = [
  "bincode",
  "itertools",
  "rayon",
- "rustyms",
+ "rustyms 0.7.0 (git+https://github.com/snijderlab/rustyms)",
  "serde",
 ]
 
@@ -141,11 +141,10 @@ dependencies = [
 
 [[package]]
 name = "num-integer"
-version = "0.1.45"
+version = "0.1.46"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "225d3389fb3509a24c93f5c29eb6bde2586b98d9f016636dff58d7c6f7569cd9"
+checksum = "7969661fd2958a5cb096e56c8e1ad0444ac2bbcd0061bd28660485a44879858f"
 dependencies = [
- "autocfg",
  "num-traits",
 ]
 
@@ -162,9 +161,9 @@ dependencies = [
 
 [[package]]
 name = "num-traits"
-version = "0.2.17"
+version = "0.2.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "39e3200413f237f41ab11ad6d161bc7239c84dcb631773ccd7de3dfe4b5c267c"
+checksum = "da0df0e5185db44f69b44f26786fe401b6c293d1907744beaa7fa62b2e5a517a"
 dependencies = [
  "autocfg",
 ]
@@ -285,7 +284,22 @@ checksum = "c08c74e62047bb2de4ff487b251e4a92e24f48745648451635cec7d591162d9f"
 [[package]]
 name = "rustyms"
 version = "0.7.0"
-source = "git+https://github.com/snijderlab/rustyms#cac82b17e9f8302d7d9d18e89b0988922c6fd714"
+source = "git+https://github.com/snijderlab/rustyms?branch=release#110d17332ebb79ec2cf231945a75f46d87f96761"
+dependencies = [
+ "bincode",
+ "flate2",
+ "itertools",
+ "ordered-float",
+ "probability",
+ "regex",
+ "serde",
+ "uom",
+]
+
+[[package]]
+name = "rustyms"
+version = "0.7.0"
+source = "git+https://github.com/snijderlab/rustyms#110d17332ebb79ec2cf231945a75f46d87f96761"
 dependencies = [
  "bincode",
  "flate2",

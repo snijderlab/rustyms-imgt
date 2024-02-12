@@ -199,13 +199,28 @@ impl<'a> IntoParallelIterator for &'a Germline {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub(crate) struct AnnotatedSequence {
     pub sequence: LinearPeptide,
     /// The different regions in the sequence, defined by their name and length
     pub regions: Vec<(Region, usize)>,
     /// 0 based locations of single amino acid annotations, overlapping with the regions defined above
     pub conserved: Vec<(Annotation, usize)>,
+}
+
+impl AnnotatedSequence {
+    pub fn new(
+        sequence: LinearPeptide,
+        regions: Vec<(Region, usize)>,
+        mut conserved: Vec<(Annotation, usize)>,
+    ) -> Self {
+        conserved.sort_unstable_by_key(|c| c.1);
+        Self {
+            sequence,
+            regions,
+            conserved,
+        }
+    }
 }
 
 /// A germline gene name, broken up in its constituent parts.
@@ -499,6 +514,7 @@ pub enum Region {
     FR4,
     CH1,
     H,
+    H_CH2,
     CH2,
     CH3,
     CH4,
@@ -507,6 +523,14 @@ pub enum Region {
     CH7,
     CH8,
     CH9,
+    CH2_CHS,
+    CH3_CHS,
+    CH4_CHS,
+    CH5_CHS,
+    CH6_CHS,
+    CH7_CHS,
+    CH8_CHS,
+    CH9_CHS,
     CHS,
     CL,
     M,
@@ -529,6 +553,7 @@ impl Display for Region {
                 Self::FR4 => "FR4",
                 Self::CH1 => "CH1",
                 Self::H => "H",
+                Self::H_CH2 => "H-CHS",
                 Self::CH2 => "CH2",
                 Self::CH3 => "CH3",
                 Self::CH4 => "CH4",
@@ -537,6 +562,14 @@ impl Display for Region {
                 Self::CH7 => "CH7",
                 Self::CH8 => "CH8",
                 Self::CH9 => "CH9",
+                Self::CH2_CHS => "CH2-CHS",
+                Self::CH3_CHS => "CH3-CHS",
+                Self::CH4_CHS => "CH4-CHS",
+                Self::CH5_CHS => "CH5-CHS",
+                Self::CH6_CHS => "CH6-CHS",
+                Self::CH7_CHS => "CH7-CHS",
+                Self::CH8_CHS => "CH8-CHS",
+                Self::CH9_CHS => "CH9-CHS",
                 Self::CHS => "CHS",
                 Self::CL => "CL",
                 Self::M => "M",
@@ -548,7 +581,7 @@ impl Display for Region {
 }
 
 /// Any annotation in a germline, eg conserved residues
-#[derive(Clone, Copy, Serialize, Deserialize, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Debug)]
 pub enum Annotation {
     Cysteine1,
     Cysteine2,

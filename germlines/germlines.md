@@ -2,7 +2,7 @@
 
 | Kind | V | J | C |
 |------|---|---|---|
-|IGHV|12/13|3/4|7/17|
+|IGHV|12/13|3/4|7/9|
 |IGKV|6/6|1/1|1/1|
 |IGLV|25/26|5/5|4/4|
 |IGIV|0/0|0/0|0/0|
@@ -42,17 +42,6 @@ _Number of genes / number of alleles_
 
 _Number of genes / number of alleles_
 
-## Cercocebus atys / Sooty mangabey
-
-| Kind | V | J | C |
-|------|---|---|---|
-|IGHV|0/0|0/0|4/4|
-|IGKV|0/0|0/0|0/0|
-|IGLV|0/0|0/0|0/0|
-|IGIV|0/0|0/0|0/0|
-
-_Number of genes / number of alleles_
-
 ## Danio rerio / Zebrafish
 
 | Kind | V | J | C |
@@ -68,7 +57,7 @@ _Number of genes / number of alleles_
 
 | Kind | V | J | C |
 |------|---|---|---|
-|IGHV|19/25|6/6|10/23|
+|IGHV|19/25|6/6|10/17|
 |IGKV|17/20|4/5|1/2|
 |IGLV|0/0|0/0|0/0|
 |IGIV|0/0|0/0|0/0|
@@ -123,9 +112,9 @@ _Number of genes / number of alleles_
 
 | Kind | V | J | C |
 |------|---|---|---|
-|IGHV|57/268|6/9|11/82|
-|IGKV|41/77|5/6|1/4|
-|IGLV|33/89|5/6|5/9|
+|IGHV|56/177|6/9|11/52|
+|IGKV|40/61|5/6|1/4|
+|IGLV|33/74|5/6|5/8|
 |IGIV|0/0|0/0|0/0|
 
 _Number of genes / number of alleles_
@@ -134,7 +123,7 @@ _Number of genes / number of alleles_
 
 | Kind | V | J | C |
 |------|---|---|---|
-|IGHV|23/23|19/19|2/3|
+|IGHV|23/23|19/19|2/2|
 |IGKV|0/0|0/0|0/0|
 |IGLV|0/0|0/0|0/0|
 |IGIV|0/0|0/0|0/0|
@@ -156,7 +145,7 @@ _Number of genes / number of alleles_
 
 | Kind | V | J | C |
 |------|---|---|---|
-|IGHV|61/61|6/6|6/11|
+|IGHV|1/1|6/6|1/1|
 |IGKV|0/0|0/0|0/0|
 |IGLV|0/0|0/0|0/0|
 |IGIV|0/0|0/0|0/0|
@@ -167,20 +156,9 @@ _Number of genes / number of alleles_
 
 | Kind | V | J | C |
 |------|---|---|---|
-|IGHV|125/310|7/11|8/43|
-|IGKV|85/129|5/5|1/2|
-|IGLV|73/108|7/7|6/9|
-|IGIV|0/0|0/0|0/0|
-
-_Number of genes / number of alleles_
-
-## Macaca nemestrina / Pig-tailed macaque
-
-| Kind | V | J | C |
-|------|---|---|---|
-|IGHV|0/0|0/0|4/4|
-|IGKV|0/0|0/0|0/0|
-|IGLV|0/0|0/0|0/0|
+|IGHV|122/279|7/11|8/16|
+|IGKV|59/78|5/5|1/2|
+|IGLV|55/74|7/7|6/9|
 |IGIV|0/0|0/0|0/0|
 
 _Number of genes / number of alleles_
@@ -211,20 +189,9 @@ _Number of genes / number of alleles_
 
 | Kind | V | J | C |
 |------|---|---|---|
-|IGHV|306/433|4/6|9/33|
-|IGKV|103/121|4/4|1/1|
+|IGHV|283/399|4/6|9/22|
+|IGKV|102/115|4/4|1/1|
 |IGLV|3/5|3/3|4/4|
-|IGIV|0/0|0/0|0/0|
-
-_Number of genes / number of alleles_
-
-## Mus musculus castaneus / Southeastern Asian house mouse
-
-| Kind | V | J | C |
-|------|---|---|---|
-|IGHV|0/0|0/0|0/0|
-|IGKV|1/1|0/0|0/0|
-|IGLV|0/0|0/0|0/0|
 |IGIV|0/0|0/0|0/0|
 
 _Number of genes / number of alleles_
@@ -233,31 +200,9 @@ _Number of genes / number of alleles_
 
 | Kind | V | J | C |
 |------|---|---|---|
-|IGHV|1/1|0/0|1/1|
-|IGKV|1/2|0/0|0/0|
+|IGHV|1/1|0/0|0/0|
+|IGKV|0/0|0/0|0/0|
 |IGLV|0/0|1/1|2/2|
-|IGIV|0/0|0/0|0/0|
-
-_Number of genes / number of alleles_
-
-## Mus musculus molossinus / Japanese wild mouse
-
-| Kind | V | J | C |
-|------|---|---|---|
-|IGHV|0/0|0/0|0/0|
-|IGKV|1/1|0/0|0/0|
-|IGLV|0/0|0/0|0/0|
-|IGIV|0/0|0/0|0/0|
-
-_Number of genes / number of alleles_
-
-## Mus musculus musculus / Eastern European house mouse
-
-| Kind | V | J | C |
-|------|---|---|---|
-|IGHV|0/0|0/0|0/0|
-|IGKV|1/1|0/0|0/0|
-|IGLV|0/0|0/0|0/0|
 |IGIV|0/0|0/0|0/0|
 
 _Number of genes / number of alleles_
@@ -284,23 +229,12 @@ _Number of genes / number of alleles_
 
 _Number of genes / number of alleles_
 
-## Mus sp. / Mice
-
-| Kind | V | J | C |
-|------|---|---|---|
-|IGHV|0/0|1/1|0/0|
-|IGKV|0/0|0/0|0/0|
-|IGLV|0/0|0/0|0/0|
-|IGIV|0/0|0/0|0/0|
-
-_Number of genes / number of alleles_
-
 ## Mus spretus / Western wild mouse
 
 | Kind | V | J | C |
 |------|---|---|---|
 |IGHV|0/0|0/0|0/0|
-|IGKV|2/2|0/0|1/1|
+|IGKV|0/0|0/0|1/1|
 |IGLV|2/2|0/0|1/2|
 |IGIV|0/0|0/0|0/0|
 
@@ -321,7 +255,7 @@ _Number of genes / number of alleles_
 
 | Kind | V | J | C |
 |------|---|---|---|
-|IGHV|43/46|19/23|4/7|
+|IGHV|42/45|19/23|3/5|
 |IGKV|0/0|0/0|0/0|
 |IGLV|0/0|0/0|0/0|
 |IGIV|0/0|0/0|0/0|
@@ -343,9 +277,9 @@ _Number of genes / number of alleles_
 
 | Kind | V | J | C |
 |------|---|---|---|
-|IGHV|33/33|6/11|16/23|
-|IGKV|64/66|5/8|2/10|
-|IGLV|20/20|2/2|6/7|
+|IGHV|14/14|6/11|7/8|
+|IGKV|5/7|5/8|2/10|
+|IGLV|20/20|2/2|3/3|
 |IGIV|0/0|0/0|0/0|
 
 _Number of genes / number of alleles_
@@ -355,19 +289,8 @@ _Number of genes / number of alleles_
 | Kind | V | J | C |
 |------|---|---|---|
 |IGHV|0/0|2/2|0/0|
-|IGKV|5/5|2/2|1/1|
-|IGLV|52/62|1/1|1/2|
-|IGIV|0/0|0/0|0/0|
-
-_Number of genes / number of alleles_
-
-## Papio anubis anubis / Olive baboon anubis
-
-| Kind | V | J | C |
-|------|---|---|---|
-|IGHV|0/0|0/0|4/4|
-|IGKV|0/0|0/0|0/0|
-|IGLV|0/0|0/0|0/0|
+|IGKV|5/5|1/1|1/1|
+|IGLV|50/60|1/1|1/2|
 |IGIV|0/0|0/0|0/0|
 
 _Number of genes / number of alleles_
@@ -398,7 +321,7 @@ _Number of genes / number of alleles_
 
 | Kind | V | J | C |
 |------|---|---|---|
-|IGHV|122/122|4/4|8/11|
+|IGHV|122/122|4/4|8/10|
 |IGKV|38/38|6/6|1/2|
 |IGLV|8/8|2/2|4/4|
 |IGIV|0/0|0/0|0/0|
@@ -420,7 +343,7 @@ _Number of genes / number of alleles_
 
 | Kind | V | J | C |
 |------|---|---|---|
-|IGHV|5/5|5/5|11/19|
+|IGHV|5/5|5/5|10/13|
 |IGKV|11/19|5/8|1/2|
 |IGLV|10/14|3/4|2/2|
 |IGIV|0/0|0/0|0/0|
