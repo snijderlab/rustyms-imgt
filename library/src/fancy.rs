@@ -2,27 +2,27 @@ pub use crate::shared::*;
 use std::fmt::Display;
 use std::fmt::Write;
 
+/// Display things and allow the use of fancy non ascii characters
 pub trait FancyDisplay: Display {
+    /// Equivalent of `.to_string()` but then fancier!
     fn to_fancy_string(&self) -> String;
 }
 
 impl FancyDisplay for Gene {
     fn to_fancy_string(&self) -> String {
-        let mut f = String::new();
-        fn to_roman(n: usize) -> &'static str {
+        const fn to_roman(n: usize) -> &'static str {
             ["0", "Ⅰ", "Ⅱ", "Ⅲ", "Ⅳ", "Ⅴ", "Ⅵ", "Ⅶ", "Ⅷ", "Ⅸ", "Ⅹ"][n]
         }
+        let mut f = String::new();
 
         write!(
             f,
             "Ig{}{}{}{}",
             self.chain.to_fancy_string(),
             self.gene.to_fancy_string(),
-            if let Some(n) = &self.number {
-                format!("({})", to_roman(*n))
-            } else {
-                String::new()
-            },
+            self.number
+                .as_ref()
+                .map_or_else(String::new, |n| format!("({})", to_roman(*n))),
             if self.number.is_some() && !self.family.is_empty() {
                 "-"
             } else {

@@ -77,6 +77,8 @@ pub(crate) struct Chain {
 }
 
 impl Chain {
+    /// # Panics
+    /// It panics when it inserts an allele it has already placed (has to be filtered and ranked before)
     pub(crate) fn insert(&mut self, mut germline: Germline) {
         let db = match &germline.name.gene {
             GeneType::V => &mut self.variable,
@@ -91,7 +93,7 @@ impl Chain {
                     .alleles
                     .binary_search_by_key(&germline.alleles[0].0, |a| a.0)
                 {
-                    Ok(allele_index) => {
+                    Ok(_allele_index) => {
                         // if germline.alleles[0].1.sequence
                         //     == db[index].alleles[allele_index].1.sequence
                         // {
@@ -205,7 +207,7 @@ pub(crate) struct AnnotatedSequence {
     /// The different regions in the sequence, defined by their name and length
     pub regions: Vec<(Region, usize)>,
     /// 0 based locations of single amino acid annotations, overlapping with the regions defined above
-    pub conserved: Vec<(Annotation, usize)>,
+    pub annotations: Vec<(Annotation, usize)>,
 }
 
 impl AnnotatedSequence {
@@ -218,7 +220,7 @@ impl AnnotatedSequence {
         Self {
             sequence,
             regions,
-            conserved,
+            annotations: conserved,
         }
     }
 }
@@ -226,15 +228,19 @@ impl AnnotatedSequence {
 /// A germline gene name, broken up in its constituent parts.
 #[derive(Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord, Clone, Debug)]
 pub struct Gene {
+    /// The chain of this gene (heavy/kappa etc)
     pub chain: ChainType,
+    /// The kind of gene (V/J/C)
     pub gene: GeneType,
+    /// If present the additional number _IGHV_ **(I)**
     pub number: Option<usize>,
+    /// The family indicators _IGHV_ **-1D**
     pub family: Vec<(Option<usize>, String)>,
 }
 
 impl Display for Gene {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        fn to_roman(n: usize) -> &'static str {
+        const fn to_roman(n: usize) -> &'static str {
             [
                 "0", "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X",
             ][n]
@@ -245,11 +251,9 @@ impl Display for Gene {
             "IG{}{}{}{}",
             self.chain,
             self.gene,
-            if let Some(n) = &self.number {
-                format!("({})", to_roman(*n))
-            } else {
-                String::new()
-            },
+            self.number
+                .as_ref()
+                .map_or_else(String::new, |n| format!("({})", to_roman(*n))),
             if self.number.is_some() && !self.family.is_empty() {
                 "-"
             } else {
@@ -278,36 +282,45 @@ impl Display for Gene {
 
 impl Gene {
     /// Get an IMGT name with allele, eg IGHV3-23*03
+    /// # Errors
+    /// If not recognised as a name, returns a description of the error.
+    #[allow(clippy::missing_panics_doc)] // Cannot panic
     pub fn from_imgt_name_with_allele(s: &str) -> Result<(Self, usize), String> {
         let s = s.split(" or ").next().unwrap(); // Just ignore double names
         let (gene, tail) = Self::from_imgt_name_internal(s)?;
         if tail.is_empty() {
             return Ok((gene, 1));
         }
-        let allele = if let Some(tail) = tail.strip_prefix('*') {
-            tail.parse()
-                .map_err(|_| format!("Invalid allele spec: `{}`", &tail))
-        } else {
-            Err(format!("Invalid allele spec: `{tail}`"))
-        }?;
+        let allele = tail.strip_prefix('*').map_or_else(
+            || Err(format!("Invalid allele spec: `{tail}`")),
+            |tail| {
+                tail.parse()
+                    .map_err(|_| format!("Invalid allele spec: `{}`", &tail))
+            },
+        )?;
         Ok((gene, allele))
     }
 
     /// Get an IMGT name, eg IGHV3-23
+    /// # Errors
+    /// If not recognised as a name, returns a description of the error.
     pub fn from_imgt_name(s: &str) -> Result<Self, String> {
         Self::from_imgt_name_internal(s).map(|(gene, _)| gene)
     }
 
+    /// # Errors
+    /// If not recognised as a name, returns a description of the error.
     fn from_imgt_name_internal(s: &str) -> Result<(Self, &str), String> {
+        #[allow(clippy::missing_panics_doc)] // Cannot panic
         fn parse_name(s: &str) -> (Option<(Option<usize>, String)>, &str) {
             let num = s
                 .chars()
-                .take_while(|c| c.is_ascii_digit())
+                .take_while(char::is_ascii_digit)
                 .collect::<String>();
             let tail = s
                 .chars()
                 .skip(num.len())
-                .take_while(|c| c.is_ascii_alphabetic())
+                .take_while(char::is_ascii_alphabetic)
                 .collect::<String>();
             let rest = &s[num.len() + tail.len()..];
             if num.is_empty() && tail.is_empty() {
@@ -385,8 +398,11 @@ impl Gene {
 /// Any chain type of germline
 #[derive(Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Hash, Debug)]
 pub enum ChainType {
+    /// Heavy chain
     Heavy = 0,
+    /// Light kappa chain
     LightKappa,
+    /// Light lambda chain
     LightLambda,
     /// Fish I kind
     Iota,
@@ -583,11 +599,17 @@ impl Display for Region {
 /// Any annotation in a germline, eg conserved residues
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Debug)]
 pub enum Annotation {
+    /// First conserved cysteine
     Cysteine1,
+    /// Second conserved cysteine
     Cysteine2,
+    /// Conserved tryptophan of the J motif
     Tryptophan,
+    /// Conserved phenylalanine of the J motif
     Phenylalanine,
+    /// Any of the conserved glycines of the J motif
     Glycine,
+    /// A potential N linked glycan position
     NGlycan,
 }
 
@@ -608,6 +630,7 @@ impl Display for Annotation {
     }
 }
 
+#[allow(clippy::missing_panics_doc)]
 #[test]
 fn imgt_names() {
     assert_eq!(

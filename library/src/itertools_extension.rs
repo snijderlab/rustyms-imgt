@@ -1,5 +1,5 @@
 //! Copied over from a #654 in itertools until that is merged.
-//! https://github.com/rust-itertools/itertools/pull/654
+//! <https://github.com/rust-itertools/itertools/pull/654>
 #![allow(dead_code)]
 use core::cmp::{Ordering, Reverse};
 use std::vec::{IntoIter, Vec};
@@ -19,7 +19,7 @@ fn k_smallest_general<T, I: Iterator<Item = T>>(
     // Rearrange the into a valid heap by reordering from the second-bottom-most layer up
     // Slightly faster than ordering on each insert
     // (But only by a factor of lg(k) and I'd love to hear of a use case where that matters)
-    for i in (0..(heap.len() / 2 + 1)).rev() {
+    for i in (0..=(heap.len() / 2)).rev() {
         sift_down(heap, &mut comparator, i);
     }
 
@@ -66,7 +66,7 @@ fn sift_down<T>(
     comparator: &mut impl FnMut(&T, &T) -> Ordering,
     mut origin: usize,
 ) {
-    fn children_of(n: usize) -> (usize, usize) {
+    const fn children_of(n: usize) -> (usize, usize) {
         (2 * n + 1, 2 * n + 2)
     }
 
@@ -95,8 +95,6 @@ fn sift_down<T>(
 }
 
 pub trait ItertoolsExt: Iterator {
-    /// itertools::assert_equal(five_smallest, 0..5);
-    /// ```
     fn k_smallest(mut self, k: usize) -> std::vec::IntoIter<Self::Item>
     where
         Self: Sized,
@@ -129,7 +127,7 @@ pub trait ItertoolsExt: Iterator {
     /// Sort the k smallest elements into a new iterator using the provided comparison.
     ///
     /// This corresponds to `self.sorted_by(cmp).take(k)` in the same way that
-    /// [Itertools::k_smallest] corresponds to `self.sorted().take(k)`, in both semantics and complexity.
+    /// [`Itertools::k_smallest`] corresponds to `self.sorted().take(k)`, in both semantics and complexity.
     /// Particularly, a custom heap implementation ensures the comparison is not cloned.
     fn k_smallest_by<F>(self, k: usize, cmp: F) -> std::vec::IntoIter<Self::Item>
     where
@@ -142,7 +140,7 @@ pub trait ItertoolsExt: Iterator {
     /// Return the elements producing the k smallest outputs of the provided function
     ///
     /// This corresponds to `self.sorted_by_key(cmp).take(k)` in the same way that
-    /// [Itertools::k_smallest] corresponds to `self.sorted().take(k)`, in both semantics and time complexity.
+    /// [`Itertools::k_smallest`] corresponds to `self.sorted().take(k)`, in both semantics and time complexity.
     /// This method will use an _additional_ `k * sizeof(K)` memory compared to that method.
     fn k_smallest_by_key<F, K>(self, k: usize, key: F) -> std::vec::IntoIter<Self::Item>
     where
@@ -157,18 +155,6 @@ pub trait ItertoolsExt: Iterator {
     /// Semantically equivalent to `k_smallest` with a reversed `Ord`
     /// However, this is implemented by way of a custom binary heap
     /// which does not have the same performance characteristics for very large `T`
-    /// ```
-    /// use itertools::Itertools;
-    ///
-    /// // A random permutation of 0..15
-    /// let numbers = vec![6, 9, 1, 14, 0, 4, 8, 7, 11, 2, 10, 3, 13, 12, 5];
-    ///
-    /// let five_largest = numbers
-    ///     .into_iter()
-    ///     .k_largest(5);
-    ///
-    /// itertools::assert_equal(five_largest, vec![14,13,12,11,10]);
-    /// ```
     fn k_largest(self, k: usize) -> std::vec::IntoIter<Self::Item>
     where
         Self: Sized,
@@ -199,4 +185,4 @@ pub trait ItertoolsExt: Iterator {
     }
 }
 
-impl<T: ?Sized> ItertoolsExt for T where T: Iterator {}
+impl<T: Iterator + ?Sized> ItertoolsExt for T {}

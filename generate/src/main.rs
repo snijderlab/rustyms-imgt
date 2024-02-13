@@ -8,7 +8,7 @@ use std::{
     str::FromStr,
 };
 
-#[path = "../../shared/mod.rs"]
+#[path = "../../library/src/shared/mod.rs"]
 mod shared;
 
 use crate::shared::*;
@@ -1214,7 +1214,7 @@ struct TemporarySequence {
     acc: Vec<String>,
     sequence: LinearPeptide,
     regions: HashMap<Vec<(shared::Region, usize)>, Vec<usize>>,
-    conserved: HashMap<Vec<(Annotation, usize)>, Vec<usize>>,
+    annotations: HashMap<Vec<(Annotation, usize)>, Vec<usize>>,
     dna: HashMap<String, Vec<usize>>,
 }
 
@@ -1225,7 +1225,7 @@ impl TemporarySequence {
             sequence: single.sequence.sequence,
             dna: [(single.dna, vec![0])].into(),
             regions: [(single.sequence.regions, vec![0])].into(),
-            conserved: [(single.sequence.conserved, vec![0])].into(),
+            annotations: [(single.sequence.annotations, vec![0])].into(),
         }
     }
 
@@ -1237,8 +1237,8 @@ impl TemporarySequence {
             .entry(single.sequence.regions)
             .or_default()
             .push(index);
-        self.conserved
-            .entry(single.sequence.conserved)
+        self.annotations
+            .entry(single.sequence.annotations)
             .or_default()
             .push(index);
     }
@@ -1247,7 +1247,7 @@ impl TemporarySequence {
         AnnotatedSequence {
             sequence: self.sequence.clone(),
             regions: self.regions()[0].0.clone(),
-            conserved: self.conserved()[0].0.clone(),
+            annotations: self.conserved()[0].0.clone(),
         }
     }
 
@@ -1264,7 +1264,7 @@ impl TemporarySequence {
 
     fn conserved(&self) -> Vec<(Vec<(Annotation, usize)>, Vec<usize>)> {
         let mut vec = self
-            .conserved
+            .annotations
             .iter()
             .map(|(r, a)| (r.to_owned(), a.to_owned()))
             .collect_vec();

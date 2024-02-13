@@ -8,7 +8,10 @@ macro_rules! species {
         #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, Ord, PartialOrd)]
         #[non_exhaustive]
         pub enum Species {
-            $($identifier,)*
+            $(
+            #[doc = $imgt]
+            $identifier,
+            )*
         }
 
         impl Display for Species {
@@ -19,31 +22,34 @@ macro_rules! species {
 
         impl Species {
             /// The common name for this species, eg `Human`
-            pub fn common_name(&self) -> &'static str {
+            pub const fn common_name(&self) -> &'static str {
                 match self {
                     $(Self::$identifier => $common,)*
                 }
             }
             /// The name IMGT uses to identify this species, eg `Homo sapiens (human)`
-            pub fn imgt_name(&self) -> &'static str {
+            pub const fn imgt_name(&self) -> &'static str {
                 match self {
                     $(Self::$identifier => $imgt,)*
                 }
             }
             /// The common name for this species, eg `Homo sapiens`
-            pub fn scientific_name(&self) -> &'static str {
+            pub const fn scientific_name(&self) -> &'static str {
                 match self {
                     $(Self::$identifier => $scientific,)*
                 }
             }
             /// The enum name for this species, eg `HomoSapiens`
-            pub(crate) fn ident(&self) -> &'static str {
+            pub(crate) const fn ident(&self) -> &'static str {
                 match self {
                     $(Self::$identifier => stringify!($identifier),)*
                 }
             }
 
-            /// Get the species name from IMGT name tag, or None if it is not a proper species
+            /// Get the species name from IMGT name tag.
+            /// # Errors
+            /// `Err` when the name could not be recognised (it is case sensitive).
+            /// `Ok(None)` when it is recognised as a species used by IMGT, but it is not a proper species (vector/plasmid etc).
             pub(crate) fn from_imgt(s: &str) -> Result<Option<Self>, ()> {
                 match s {
                     $($imgt => Ok(Some(Self::$identifier)),)*

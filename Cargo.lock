@@ -89,27 +89,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "generate"
-version = "0.1.0"
-dependencies = [
- "bincode",
- "itertools",
- "rustyms 0.7.0 (git+https://github.com/snijderlab/rustyms?branch=release)",
- "serde",
-]
-
-[[package]]
-name = "imgt-germlines"
-version = "0.1.0"
-dependencies = [
- "bincode",
- "itertools",
- "rayon",
- "rustyms 0.7.0 (git+https://github.com/snijderlab/rustyms)",
- "serde",
-]
-
-[[package]]
 name = "itertools"
 version = "0.12.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -309,6 +288,27 @@ dependencies = [
  "regex",
  "serde",
  "uom",
+]
+
+[[package]]
+name = "rustyms-imgt"
+version = "0.1.0"
+dependencies = [
+ "bincode",
+ "itertools",
+ "rayon",
+ "rustyms 0.7.0 (git+https://github.com/snijderlab/rustyms)",
+ "serde",
+]
+
+[[package]]
+name = "rustyms-imgt-generate"
+version = "0.1.0"
+dependencies = [
+ "bincode",
+ "itertools",
+ "rustyms 0.7.0 (git+https://github.com/snijderlab/rustyms?branch=release)",
+ "serde",
 ]
 
 [[package]]

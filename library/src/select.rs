@@ -16,8 +16,8 @@ pub fn get_germline(
     crate::germlines(species).and_then(|g| g.find(species, gene, allele))
 }
 
+/// The selection rules for iterating over a selection of germlines.
 #[derive(Debug, Clone, PartialEq, Eq)]
-/// The selection rules for iterating over all alleles in a selection of germlines.
 pub struct Selection {
     /// The species you want, None allows all, otherwise only the species specified will be returned
     pub species: Option<HashSet<Species>>,
@@ -30,54 +30,51 @@ pub struct Selection {
 }
 
 impl Selection {
-    /// Builder pattern method to add a species selection, will replace any previously set selection
+    /// Builder pattern method to add a species selection, will replace any previously set species selection
+    #[must_use]
     pub fn species(self, species: impl Into<HashSet<Species>>) -> Self {
         Self {
             species: Some(species.into()),
             ..self
         }
     }
-    /// Builder pattern method to add a chain selection, will replace any previously set selection
+
+    /// Builder pattern method to add a chain selection, will replace any previously set chain selection
+    #[must_use]
     pub fn chain(self, chains: impl Into<HashSet<ChainType>>) -> Self {
         Self {
             chains: Some(chains.into()),
             ..self
         }
     }
-    /// Builder pattern method to add a gene selection, will replace any previously set selection
+
+    /// Builder pattern method to add a gene selection, will replace any previously set gene selection
+    #[must_use]
     pub fn gene(self, genes: impl Into<HashSet<GeneType>>) -> Self {
         Self {
             genes: Some(genes.into()),
             ..self
         }
     }
-    /// Builder pattern method to add an allele selection, will replace any previously set selection
+
+    /// Builder pattern method to add an allele selection, will replace any previously set allele selection
+    #[must_use]
     pub fn allele(self, allele: AlleleSelection) -> Self {
         Self { allele, ..self }
     }
+
     /// Get the selected alleles
     pub fn germlines(self) -> impl Iterator<Item = Allele<'static>> {
         crate::all_germlines()
             .filter(move |g| {
                 self.species
                     .as_ref()
-                    .map(|s| s.contains(&g.species))
-                    .unwrap_or(true)
+                    .map_or(true, |s| s.contains(&g.species))
             })
             .flat_map(|g| g.into_iter().map(|c| (g.species, c.0, c.1)))
-            .filter(move |(_, kind, _)| {
-                self.chains
-                    .as_ref()
-                    .map(|k| k.contains(kind))
-                    .unwrap_or(true)
-            })
+            .filter(move |(_, kind, _)| self.chains.as_ref().map_or(true, |k| k.contains(kind)))
             .flat_map(|(species, _, c)| c.into_iter().map(move |g| (species, g.0, g.1)))
-            .filter(move |(_, gene, _)| {
-                self.genes
-                    .as_ref()
-                    .map(|s| s.contains(gene))
-                    .unwrap_or(true)
-            })
+            .filter(move |(_, gene, _)| self.genes.as_ref().map_or(true, |s| s.contains(gene)))
             .flat_map(|(species, _, germlines)| germlines.iter().map(move |a| (species, a)))
             .flat_map(move |(species, germline)| {
                 germline
@@ -87,6 +84,7 @@ impl Selection {
             })
             .map(Into::into)
     }
+
     #[cfg(feature = "rayon")]
     /// Get the selected alleles in parallel fashion, only available if you enable the feature "rayon" (on by default)
     pub fn par_germlines(self) -> impl ParallelIterator<Item = Allele<'static>> {
@@ -94,23 +92,12 @@ impl Selection {
             .filter(move |g| {
                 self.species
                     .as_ref()
-                    .map(|s| s.contains(&g.species))
-                    .unwrap_or(true)
+                    .map_or(true, |s| s.contains(&g.species))
             })
             .flat_map(|g| g.into_par_iter().map(|c| (g.species, c.0, c.1)))
-            .filter(move |(_, kind, _)| {
-                self.chains
-                    .as_ref()
-                    .map(|k| k.contains(kind))
-                    .unwrap_or(true)
-            })
+            .filter(move |(_, kind, _)| self.chains.as_ref().map_or(true, |k| k.contains(kind)))
             .flat_map(|(species, _, c)| c.into_par_iter().map(move |g| (species, g.0, g.1)))
-            .filter(move |(_, gene, _)| {
-                self.genes
-                    .as_ref()
-                    .map(|s| s.contains(gene))
-                    .unwrap_or(true)
-            })
+            .filter(move |(_, gene, _)| self.genes.as_ref().map_or(true, |s| s.contains(gene)))
             .flat_map(|(species, _, germlines)| {
                 germlines.into_par_iter().map(move |a| (species, a))
             })
@@ -136,8 +123,8 @@ impl Default for Selection {
     }
 }
 
+/// The allele handling strategy
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
-/// The way of handling alleles you want
 pub enum AlleleSelection {
     /// Return all alleles
     All,
@@ -146,7 +133,7 @@ pub enum AlleleSelection {
 }
 
 impl AlleleSelection {
-    fn take_num(&self) -> usize {
+    const fn take_num(&self) -> usize {
         match self {
             Self::First => 1,
             Self::All => usize::MAX,
@@ -155,8 +142,8 @@ impl AlleleSelection {
 }
 
 /// A returned allele
-#[non_exhaustive]
-#[derive(Debug, Clone)]
+#[non_exhaustive] // Do not let anyone build it themselves
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Allele<'a> {
     /// The species where this gene originates from
     pub species: Species,
@@ -164,11 +151,11 @@ pub struct Allele<'a> {
     pub gene: std::borrow::Cow<'a, Gene>,
     /// The allele number, in IMGT this follows the name, eg `*01` is the allele in `IGHV3-23*01`
     pub allele: usize,
-    /// The actual sequence, the sequences are flat amino acids, no modification of any way shape or form
+    /// The actual sequence, the sequences present in the database are pure amino acids, no modifications are to be expected
     pub sequence: &'a LinearPeptide,
     /// The regions in the sequence, every region has an annotation and a length, all lengths together are the same length as the full sequence
     pub regions: &'a [(Region, usize)],
-    /// Any additional annotations, every annotation has beside the kind it is also it location, as index in the sequence
+    /// Any additional annotations, every annotation has beside the kind it is also its location, as index in the sequence
     pub annotations: &'a [(Annotation, usize)],
 }
 
@@ -178,7 +165,7 @@ impl<'a> Allele<'a> {
         format!("{}*{:02}", self.gene, self.allele)
     }
 
-    /// Get the biologists name for this allele with fancy non UTF-8 characters
+    /// Get the biologists name for this allele with fancy non ASCII characters
     pub fn fancy_name(&self) -> String {
         format!("{}*{:02}", self.gene.to_fancy_string(), self.allele)
     }
@@ -217,7 +204,7 @@ impl<'a> From<(Species, &'a Gene, usize, &'a AnnotatedSequence)> for Allele<'a> 
             allele: value.2,
             sequence: &value.3.sequence,
             regions: &value.3.regions,
-            annotations: &value.3.conserved,
+            annotations: &value.3.annotations,
         }
     }
 }
@@ -240,9 +227,9 @@ impl Germlines {
             .ok()
             .and_then(|g| {
                 let g = &genes[g];
-                allele
-                    .map(|a| g.alleles.iter().find(|(ga, _)| a == *ga))
-                    .unwrap_or(g.alleles.first())
+                allele.map_or(g.alleles.first(), |a| {
+                    g.alleles.iter().find(|(ga, _)| a == *ga)
+                })
             })
             .map(move |(a, seq)| Allele {
                 species,
@@ -250,12 +237,13 @@ impl Germlines {
                 allele: *a,
                 sequence: &seq.sequence,
                 regions: &seq.regions,
-                annotations: &seq.conserved,
+                annotations: &seq.annotations,
             })
     }
 }
 
 #[cfg(test)]
+#[allow(clippy::missing_panics_doc)]
 mod tests {
     use crate::Selection;
     use crate::{ChainType, GeneType, Species};
